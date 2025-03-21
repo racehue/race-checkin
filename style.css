@@ -1,213 +1,198 @@
-/* General Styles */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    font-family: Arial, sans-serif;
-    background-color: #f9f9f9;
-}
-
-header {
-    background-color: #007bff;
-    color: white;
-    text-align: center;
-    padding: 1rem;
-}
-
-.filters {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem;
-    background-color: #fff;
-    border-bottom: 1px solid #ddd;
-}
-
-.filter-group {
-    display: flex;
-    align-items: center;
-}
-
-.button-group button {
-    margin-left: 0.5rem;
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-.button-group button.active {
-    background-color: #007bff;
-    color: white;
-}
-
-.button-group button:hover:not(.active) {
-    background-color: #e0e0e0;
-}
-
-.search-container {
-    display: flex;
-    align-items: center;
-    padding: 1rem;
-    background-color: #fff;
-    border-bottom: 1px solid #ddd;
-}
-
-#search-input {
-    flex-grow: 1;
-    padding: 0.5rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-}
-
-#results-count {
-    margin-left: 1rem;
-    font-weight: bold;
-}
-
-.action-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-    margin-top: 1rem;
-}
-
-.btn-primary {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-.btn-primary:hover {
-    background-color: #0056b3;
-}
-
-.btn-secondary {
-    background-color: #6c757d;
-    color: white;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-.btn-secondary:hover {
-    background-color: #5a6268;
-}
-
-.btn-success {
-    background-color: #28a745;
-    color: white;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-.btn-success:hover {
-    background-color: #1e7e34;
-}
-
-.athlete-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 1rem;
-    padding: 1rem;
-}
-
-.athlete-card {
-    background-color: #fff;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 1rem;
-    text-align: center;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.athlete-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.athlete-card.selected {
-    border-color: #007bff;
-    box-shadow: 0 0 8px rgba(0, 123, 255, 0.5);
-}
-
-.athlete-photo img {
-    width: 100%;
-    height: 150px;
-    object-fit: cover;
-    border-radius: 8px;
-}
-
-.modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-.modal-content {
-    background-color: white;
-    padding: 2rem;
-    border-radius: 8px;
-    text-align: center;
-    max-width: 500px;
-    width: 100%;
-    position: relative;
-}
-
-.close-btn {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    font-size: 1.5rem;
-    cursor: pointer;
-}
-
-.camera-preview {
-    width: 100%;
-    height: 300px;
-    object-fit: cover;
-    border-radius: 8px;
-    margin-bottom: 1rem;
-}
-
-.modal-actions {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-}
-
-.notification {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background-color: #28a745;
-    color: white;
-    padding: 1rem;
-    border-radius: 4px;
-    opacity: 1;
-    transition: opacity 0.5s ease;
-}
-
-.notification.fadeout {
-    opacity: 0;
-}
+{
+     box-sizing: border-box;
+     margin: 0;
+     padding: 0;
+     font-family: Arial, sans-serif;
+ }
+ 
+ body {
+     max-width: 100%;
+     overflow-x: hidden;
+ }
+ 
+ header {
+     background-color: #0066cc;
+     color: white;
+     text-align: center;
+     padding: 15px 0;
+ }
+ 
+ .filters {
+     display: flex;
+     flex-wrap: wrap;
+     justify-content: space-between;
+     padding: 10px 15px;
+     background-color: #f5f5f5;
+ }
+ 
+ .filter-group {
+     margin-bottom: 10px;
+ }
+ 
+ .filter-group p {
+     margin-bottom: 5px;
+     font-weight: bold;
+ }
+ 
+ .button-group {
+     display: flex;
+     gap: 5px;
+ }
+ 
+ .filter-btn {
+     padding: 8px 15px;
+     background-color: #e0e0e0;
+     border: none;
+     border-radius: 4px;
+     cursor: pointer;
+ }
+ 
+ .filter-btn.active {
+     background-color: #4d94ff;
+     color: white;
+ }
+ 
+ #refresh-btn {
+     background-color: transparent;
+     color: #0066cc;
+     border: none;
+     cursor: pointer;
+     align-self: center;
+ }
+ 
+ .search-container {
+     display: flex;
+     padding: 10px 15px;
+     background-color: #f0f8e8;
+     align-items: center;
+ }
+ 
+ #search-input {
+     flex-grow: 1;
+     padding: 8px;
+     border: 1px solid #ddd;
+     border-radius: 4px;
+ }
+ 
+ #results-count {
+     margin: 0 10px;
+     color: #0066cc;
+ }
+ 
+ #filter-btn {
+     background-color: white;
+     border: 1px solid #ddd;
+     padding: 8px;
+     border-radius: 4px;
+     cursor: pointer;
+ }
+ 
+ #athletes-list {
+     padding: 10px 15px;
+ }
+ 
+ .athlete-card {
+     display: flex;
+     margin-bottom: 15px;
+     border-left: 4px solid #0066cc;
+     background-color: white;
+     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+ }
+ 
+ .athlete-photo {
+     width: 100px;
+     padding: 10px;
+ }
+ 
+ .athlete-photo img {
+     width: 100%;
+     height: auto;
+ }
+ 
+ .athlete-info {
+     flex-grow: 1;
+     padding: 10px;
+ }
+ 
+ .athlete-gender {
+     display: inline-block;
+     width: 30px;
+     height: 30px;
+     text-align: center;
+     line-height: 30px;
+     font-weight: bold;
+     color: white;
+ }
+ 
+ .gender-m {
+     background-color: #66ccff;
+ }
+ 
+ .gender-f {
+     background-color: #ff99cc;
+ }
+ 
+ .athlete-name {
+     font-weight: bold;
+     margin: 5px 0;
+ }
+ 
+ .athlete-distance {
+     background-color: #f0f0f0;
+     padding: 10px;
+     text-align: center;
+     font-size: 1.5em;
+     color: #0066cc;
+     font-weight: bold;
+ }
+ 
+ .checkin-status {
+     padding: 5px 10px;
+     color: #666;
+ }
+ 
+ .checkin-time {
+     text-align: right;
+     padding: 5px 10px;
+     font-size: 0.9em;
+     color: #666;
+ }
+ 
+ .email-btn {
+     background: none;
+     border: none;
+     color: #999;
+     font-size: 1.5em;
+     cursor: pointer;
+     padding: 10px;
+ }
+ 
+ .action-buttons {
+     display: flex;
+     position: fixed;
+     bottom: 0;
+     left: 0;
+     right: 0;
+     background-color: white;
+ }
+ 
+ .action-buttons button {
+     flex: 1;
+     padding: 15px 0;
+     border: none;
+     cursor: pointer;
+     font-weight: bold;
+ }
+ 
+ #checkin-btn {
+     background-color: #0066cc;
+     color: white;
+ }
+ 
+ #import-btn {
+     background-color: #ffcc00;
+ }
+ 
+ #test-btn {
+     background-color: #66cc66;
+ }
