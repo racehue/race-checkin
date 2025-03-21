@@ -1,55 +1,435 @@
 <!DOCTYPE html>
- <html lang="vi">
- <head>
-     <meta charset="UTF-8">
-     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-     <title>THANH KHÊ OPEN 2025</title>
-     <link rel="stylesheet" href="style.css">
- </head>
- <body>
-     <header>
-         <h1>THANH KHÊ OPEN 2025</h1>
-     </header>
-     
-     <div class="filters">
-         <div class="filter-group">
-             <p>Chọn cự ly:</p>
-             <div class="button-group">
-                 <button class="filter-btn active" data-filter="all">All</button>
-                 <button class="filter-btn" data-filter="5KM">5KM</button>
-                 <button class="filter-btn" data-filter="10KM">10KM</button>
-             </div>
-         </div>
-         
-         <div class="filter-group">
-             <p>Chọn giới tính:</p>
-             <div class="button-group">
-                 <button class="filter-btn active" data-gender="all">All</button>
-                 <button class="filter-btn" data-gender="Nam">Nam</button>
-                 <button class="filter-btn" data-gender="Nữ">Nữ</button>
-             </div>
-         </div>
-         
-         <button id="refresh-btn">Refresh</button>
-     </div>
-     
-     <div class="search-container">
-         <input type="text" id="search-input" placeholder="Tìm tên/ bib">
-         <span id="results-count">[0/0]</span>
-         <button id="filter-btn"><i class="fas fa-filter"></i></button>
-     </div>
-     
-     <div id="athletes-list">
-         <!-- Athletes will be loaded here -->
-     </div>
-     
-     <div class="action-buttons">
-         <button id="checkin-btn">Check in</button>
-         <button id="import-btn">Import VĐV</button>
-         <button id="test-btn">Test</button>
-     </div>
- 
-     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js"></script>
-     <script src="script.js"></script>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ứng dụng Check-in Sự kiện Thể thao</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@tailwindcss/browser@latest"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 4px;
+            color: white;
+            z-index: 1000;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            animation: slidein 0.3s ease-out;
+        }
+        
+        .notification.success {
+            background-color: #4CAF50;
+        }
+        
+        .notification.error {
+            background-color: #F44336;
+        }
+        
+        .notification.info {
+            background-color: #2196F3;
+        }
+        
+        .notification.fadeout {
+            animation: fadeout 0.5s ease-in forwards;
+        }
+        
+        @keyframes slidein {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes fadeout {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
+        .athlete-card {
+            display: flex;
+            border-radius: 0.5rem;
+            background-color: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+
+        .athlete-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .athlete-card.selected {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196F3;
+        }
+        
+        .athlete-card.checked-in {
+            background-color: #f0fdf4;
+            border-left: 4px solid #16a34a;
+        }
+
+        .athlete-photo {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            overflow: hidden;
+            margin-right: 1rem;
+            flex-shrink: 0;
+        }
+
+        .athlete-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .athlete-info {
+            flex: 1;
+        }
+
+        .athlete-name {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 0.5rem;
+        }
+
+        .athlete-gender {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2rem;
+            height: 2rem;
+            border-radius: 50%;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: white;
+            margin-right: 0.5rem;
+        }
+
+        .gender-m {
+            background-color: #3b82f6;
+        }
+
+        .gender-f {
+            background-color: #ec4899;
+        }
+
+        .athlete-distance {
+            font-size: 1rem;
+            font-weight: 500;
+            color: #6b7280;
+            margin-top: 0.5rem;
+        }
+
+        .checkin-status {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+
+        .checkin-status.checked {
+            color: #16a34a;
+            font-weight: 500;
+        }
+
+        .checkin-time {
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
+        
+        .bib-number {
+            font-size: 1rem;
+            color: #374151;
+            font-weight: 500;
+            margin-top: 0.25rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .action-btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.375rem;
+            background-color: #3b82f6;
+            color: white;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .action-btn:hover {
+            background-color: #2563eb;
+        }
+
+        #refresh-btn {
+            background-color: #10b981;
+        }
+
+        #refresh-btn:hover {
+            background-color: #059669;
+        }
+
+        #checkin-btn {
+            background-color: #f59e0b;
+        }
+
+        #checkin-btn:hover {
+            background-color: #d97706;
+        }
+
+        #github-export-btn {
+            background-color: #8b5cf6;
+        }
+
+        #github-export-btn:hover {
+            background-color: #7c3aed;
+        }
+
+        #github-commit-btn {
+            background-color: #4b5563;
+        }
+
+        #github-commit-btn:hover {
+            background-color: #374151;
+        }
+
+        #take-photo-btn {
+            background-color: #6b7280;
+        }
+
+        #take-photo-btn:hover {
+            background-color: #4a5568;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            border-radius: 0.5rem;
+            padding: 2rem;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            animation: modalopen 0.3s;
+        }
+
+        @keyframes modalopen {
+            from { opacity: 0; transform: translateY(-50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: #1f2937;
+        }
+
+        .close-button {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            color: #6b7280;
+            font-size: 1.5rem;
+            cursor: pointer;
+            border: none;
+            background: none;
+            padding: 0;
+        }
+
+        .close-button:hover {
+            color: #1f2937;
+        }
+
+        #webcam-preview {
+            width: 100%;
+            max-height: 300px;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        #captured-photo {
+            width: 100%;
+            max-height: 300px;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+
+        .capture-btn, .retake-btn, .confirm-btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: background-color 0.3s ease;
+        }
+
+        .capture-btn {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .capture-btn:hover {
+            background-color: #2563eb;
+        }
+
+        .retake-btn {
+            background-color: #ef4444;
+            color: white;
+        }
+        .retake-btn:hover {
+            background-color: #dc2626;
+        }
+
+        .confirm-btn {
+            background-color: #10b981;
+            color: white;
+        }
+        .confirm-btn:hover {
+            background-color: #059669;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #import-btn {
+            background-color: #a855f7;
+        }
+
+        #import-btn:hover {
+            background-color: #9333ea;
+        }
+        .loading-icon {
+            animation: spin 1s linear infinite;
+            margin-left: 0.5rem;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .no-results {
+            text-align: center;
+            padding: 1rem;
+            font-size: 1rem;
+            color: #6b7280;
+            border-radius: 0.375rem;
+            background-color: #f8fafc;
+            margin-top: 1rem;
+            border: 1px solid #e2e8f0;
+        }
+
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+    <header class="bg-blue-500 text-white py-4 text-center shadow-md">
+        <h1 class="text-2xl font-semibold">Race Check-in</h1>
+    </header>
+
+    <div class="container mx-auto px-4 py-6 flex-grow">
+        <div class="bg-white rounded-md shadow-md p-4 mb-4">
+            <input
+                type="text"
+                id="search-input"
+                placeholder="Tìm kiếm vận động viên..."
+                class="w-full px-4 py-2 rounded-md border border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+            />
+        </div>
+
+        <div class="flex flex-wrap gap-4 justify-center mb-4">
+            <button class="action-btn" id="import-btn"><i class="fas fa-file-import"></i> Nhập VĐV</button>
+            <button class="action-btn" id="refresh-btn"><i class="fas fa-sync"></i> Làm mới</button>
+            <button class="action-btn" id="checkin-btn"><i class="fas fa-check-double"></i> Check-in</button>
+            <button class="action-btn" id="take-photo-btn"><i class="fas fa-camera"></i> Chụp ảnh</button>
+        </div>
+        
+        <div class="flex flex-wrap gap-2 justify-center mb-4">
+            <button data-filter="all" class="filter-btn action-btn bg-gray-300 text-gray-700 hover:bg-gray-400">Tất cả</button>
+            <button data-filter="42K" class="filter-btn action-btn bg-gray-300 text-gray-700 hover:bg-gray-400">42K</button>
+            <button data-filter="21K" class="filter-btn action-btn bg-gray-300 text-gray-700 hover:bg-gray-400">21K</button>
+            <button data-filter="10K" class="filter-btn action-btn bg-gray-300 text-gray-700 hover:bg-gray-400">10K</button>
+            <button data-filter="5K" class="filter-btn action-btn bg-gray-300 text-gray-700 hover:bg-gray-400">5K</button>
+        </div>
+
+        <div class="flex flex-wrap gap-2 justify-center mb-4">
+            <button data-gender="all" class="gender-filter-btn action-btn bg-gray-300 text-gray-700 hover:bg-gray-400">Tất cả</button>
+            <button data-gender="nam" class="gender-filter-btn action-btn bg-gray-300 text-gray-700 hover:bg-gray-400">Nam</button>
+            <button data-gender="nữ" class="gender-filter-btn action-btn bg-gray-300 text-gray-700 hover:bg-gray-400">Nữ</button>
+        </div>
+
+        <div class="flex justify-between items-center mb-4">
+            <span id="results-count" class="text-gray-600 font-medium">[0/0]</span>
+        </div>
+
+        <div id="athletes-list" class="space-y-4">
+            </div>
+        <div id="no-results" class="hidden">Không tìm thấy vận động viên nào.</div>
+    </div>
+
+    <footer class="bg-gray-200 text-gray-700 py-4 text-center">
+        &copy; 2024 Race Check-in. All rights reserved.
+    </footer>
+
+    <div id="photo-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Chụp ảnh VĐV</h2>
+                <button id="close-modal" class="close-button"><i class="fas fa-times"></i></button>
+            </div>
+            <video id="webcam-preview" autoplay playsinline></video>
+            <img id="captured-photo" src="" alt="Captured Photo" class="hidden">
+            <div class="modal-footer">
+                <button id="capture-btn" class="capture-btn">Chụp ảnh</button>
+                <button id="retake-btn" class="retake-btn hidden">Chụp lại</button>
+                <button id="confirm-btn" class="confirm-btn hidden">Xác nhận</button>
+            </div>
+        </div>
+    </div>
  </body>
  </html>
