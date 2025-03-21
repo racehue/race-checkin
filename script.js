@@ -211,19 +211,6 @@ function setupEventListeners() {
 }
 
 // Use test data for development
-function useTestData() {
-    athletes = [
-        { id: '1', name: 'BIỆN TIẾN KIỆN', gender: 'Nam', distance: '5KM', bib: '31000', checkedIn: true, checkinTime: '20/03/2025 4:40 CH', photoUrl: '' },
-        { id: '2', name: 'CHU THỊ MỸ HẰNG', gender: 'Nữ', distance: '10KM', bib: '11101', checkedIn: true, checkinTime: '20/03/2025 1:56 CH', photoUrl: '' },
-        { id: '3', name: 'ĐẶNG ANH THI', gender: 'Nam', distance: '10KM', bib: '11803', checkedIn: true, checkinTime: '20/03/2025 4:05 CH', photoUrl: '' },
-        { id: '4', name: 'ĐẶNG HẢI', gender: 'Nam', distance: '10KM', bib: '11993', checkedIn: true, checkinTime: '20/03/2025 5:26 CH', photoUrl: '' },
-        { id: '5', name: 'ĐẶNG MINH TÀI', gender: 'Nam', distance: '5KM', bib: '38888', checkedIn: false, checkinTime: '', photoUrl: '' }
-    ];
-    
-    filteredAthletes = [...athletes];
-    updateResultsCount();
-    renderAthletes();
-}
 function updateGoogleSheet(athleteId, timeString) {
     const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwd2dmoqXdXcnZCCNjJLEN6YskOPWDdQYfeRfZDAb1HI5T0liAQ-qnpXkU6iP7HNnA0Aw/exec';
     
