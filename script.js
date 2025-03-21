@@ -1,6 +1,6 @@
 // Google Sheets API setup
 const SHEET_ID = '1kdt68gFOrTyirvo69oRDpAJDM7y_iGxvXM3HLDb57kw'; // You'll need to replace this
-const API_KEY = '110189773640066865208'; // You'll need to replace this
+const API_KEY = 'AIzaSyAMjzUR6DiIiSBkxaqtohn4YJqlm9njUu0'; // You'll need to replace this
 const SHEET_NAME = 'athletes';
 const API_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}`;
 
