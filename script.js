@@ -8,8 +8,6 @@ const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwd2dmoqXdXcnZCCNjJL
 // Global variables
 let athletes = [];
 let filteredAthletes = [];
-let selectedDistance = 'all';
-let selectedGender = 'all';
 let currentAthleteId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -109,7 +107,7 @@ function showPhotoModal(athleteId) {
 
     currentAthleteId = athleteId;
 
-    modal.style.display = 'block';
+    modal.style.display = 'flex';
 
     navigator.mediaDevices.getUserMedia({ video: true })
         .then(stream => {
@@ -160,7 +158,7 @@ function savePhotoToGoogleSheet(photoUrl) {
         .then(data => {
             console.log('Update successful:', data);
             renderAthletes();
-            showNotification('Check-in thành công');
+            showNotification('Check-in thành công!');
         })
         .catch(error => {
             console.error('Error updating sheet:', error);
@@ -193,10 +191,12 @@ function formatDate(date) {
 
 // Show notification
 function showNotification(message, type = 'success') {
+    const notificationContainer = document.getElementById('notification-container');
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
     notification.textContent = message;
-    document.body.appendChild(notification);
+    notificationContainer.appendChild(notification);
+
     setTimeout(() => {
         notification.classList.add('fadeout');
         setTimeout(() => notification.remove(), 500);
@@ -216,7 +216,7 @@ function setupEventListeners() {
     checkinBtn.addEventListener('click', () => {
         const selectedCards = document.querySelectorAll('.athlete-card.selected');
         if (selectedCards.length === 0) {
-            showNotification('Vui lòng chọn VĐV để check-in', 'error');
+            showNotification('Vui lòng chọn VĐV để check-in!', 'error');
             return;
         }
         selectedCards.forEach(card => {
@@ -231,4 +231,28 @@ function setupEventListeners() {
             card.classList.toggle('selected');
         }
     });
+}
+
+// Filter athletes based on search input
+function filterAthletes() {
+    const query = document.getElementById('search-input').value.toLowerCase();
+    filteredAthletes = athletes.filter(athlete => {
+        return (
+            athlete.name.toLowerCase().includes(query) ||
+            athlete.bib.toLowerCase().includes(query)
+        );
+    });
+    renderAthletes();
+    updateResultsCount();
+}
+
+// Use test data if API fails
+function useTestData() {
+    athletes = [
+        { id: '1', name: 'Nguyễn Văn A', gender: 'Nam', distance: '5KM', bib: '001', checkedIn: false, checkinTime: '', photoUrl: '' },
+        { id: '2', name: 'Trần Thị B', gender: 'Nữ', distance: '10KM', bib: '002', checkedIn: false, checkinTime: '', photoUrl: '' }
+    ];
+    filteredAthletes = [...athletes];
+    renderAthletes();
+    updateResultsCount();
 }
