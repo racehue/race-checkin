@@ -1,209 +1,99 @@
-/* General Styles */
-body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 0;
-    background-color: #f9f9f9;
-}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THANH KHÊ OPEN 2025</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <h1>THANH KHÊ OPEN 2025</h1>
+    </header>
 
-header {
-    background-color: #007bff;
-    color: white;
-    text-align: center;
-    padding: 1rem;
-}
+    <!-- Filters -->
+    <div class="filters">
+        <div class="filter-group">
+            <p>Chọn cự ly:</p>
+            <div class="button-group">
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="5KM">5KM</button>
+                <button class="filter-btn" data-filter="10KM">10KM</button>
+            </div>
+        </div>
 
-.filters {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem;
-    background-color: #fff;
-    border-bottom: 1px solid #ddd;
-}
+        <div class="filter-group">
+            <p>Chọn giới tính:</p>
+            <div class="button-group">
+                <button class="filter-btn active" data-gender="all">All</button>
+                <button class="filter-btn" data-gender="Nam">Nam</button>
+                <button class="filter-btn" data-gender="Nữ">Nữ</button>
+            </div>
+        </div>
 
-.filter-group {
-    display: flex;
-    align-items: center;
-}
+        <button id="refresh-btn" class="btn-secondary">Refresh</button>
+    </div>
 
-.button-group button {
-    margin-left: 0.5rem;
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
+    <!-- Search Container -->
+    <div class="search-container">
+        <input type="text" id="search-input" placeholder="Tìm tên/ bib">
+        <span id="results-count">[0/0]</span>
+        <button id="filter-btn"><i class="fas fa-filter"></i></button>
+    </div>
 
-.button-group button.active {
-    background-color: #007bff;
-    color: white;
-}
+    <!-- Athletes List -->
+    <div id="athletes-list" class="athlete-grid">
+        <!-- Example Athlete Card -->
+        <div class="athlete-card" data-id="1">
+            <div class="athlete-photo">
+                <img src="placeholder.jpg" alt="Nguyễn Văn A" onerror="this.src='placeholder.jpg'">
+            </div>
+            <div class="athlete-info">
+                <div class="athlete-name">Nguyễn Văn A</div>
+                <div class="athlete-bib">BIB: 001</div>
+                <div class="checkin-status">Chưa check in</div>
+            </div>
+        </div>
 
-.button-group button:hover:not(.active) {
-    background-color: #e0e0e0;
-}
+        <div class="athlete-card" data-id="2">
+            <div class="athlete-photo">
+                <img src="placeholder.jpg" alt="Trần Thị B" onerror="this.src='placeholder.jpg'">
+            </div>
+            <div class="athlete-info">
+                <div class="athlete-name">Trần Thị B</div>
+                <div class="athlete-bib">BIB: 002</div>
+                <div class="checkin-status">Chưa check in</div>
+            </div>
+        </div>
+    </div>
 
-.search-container {
-    display: flex;
-    align-items: center;
-    padding: 1rem;
-    background-color: #fff;
-    border-bottom: 1px solid #ddd;
-}
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+        <button id="checkin-btn" class="btn-primary">Check in</button>
+        <button id="import-btn" class="btn-secondary">Import VĐV</button>
+        <button id="test-btn" class="btn-secondary">Test</button>
+    </div>
 
-#search-input {
-    flex-grow: 1;
-    padding: 0.5rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-}
+    <!-- Modal for Capturing Photo -->
+    <div id="photo-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>Chụp ảnh check-in</h2>
+            <video id="video" autoplay playsinline class="camera-preview"></video>
+            <canvas id="canvas" style="display: none;"></canvas>
+            <div class="modal-actions">
+                <button id="capture-btn" class="btn-primary">Chụp ảnh</button>
+                <button id="confirm-btn" class="btn-success" style="display: none;">Xác nhận</button>
+            </div>
+        </div>
+    </div>
 
-#results-count {
-    margin-left: 1rem;
-    font-weight: bold;
-}
+    <!-- Notification Container -->
+    <div id="notification-container"></div>
 
-.action-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-    margin-top: 1rem;
-}
-
-.btn-primary {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-.btn-primary:hover {
-    background-color: #0056b3;
-}
-
-.btn-secondary {
-    background-color: #6c757d;
-    color: white;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-.btn-secondary:hover {
-    background-color: #5a6268;
-}
-
-.btn-success {
-    background-color: #28a745;
-    color: white;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-.btn-success:hover {
-    background-color: #1e7e34;
-}
-
-.athlete-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 1rem;
-    padding: 1rem;
-}
-
-.athlete-card {
-    background-color: #fff;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 1rem;
-    text-align: center;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.athlete-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.athlete-card.selected {
-    border-color: #007bff;
-    box-shadow: 0 0 8px rgba(0, 123, 255, 0.5);
-}
-
-.athlete-photo img {
-    width: 100%;
-    height: 150px;
-    object-fit: cover;
-    border-radius: 8px;
-}
-
-.modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-.modal-content {
-    background-color: white;
-    padding: 2rem;
-    border-radius: 8px;
-    text-align: center;
-    max-width: 500px;
-    width: 100%;
-    position: relative;
-}
-
-.close-btn {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    font-size: 1.5rem;
-    cursor: pointer;
-}
-
-.camera-preview {
-    width: 100%;
-    height: 300px;
-    object-fit: cover;
-    border-radius: 8px;
-    margin-bottom: 1rem;
-}
-
-.modal-actions {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-}
-
-.notification {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background-color: #28a745;
-    color: white;
-    padding: 1rem;
-    border-radius: 4px;
-    opacity: 1;
-    transition: opacity 0.5s ease;
-}
-
-.notification.fadeout {
-    opacity: 0;
-}
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
