@@ -224,3 +224,15 @@ function useTestData() {
     updateResultsCount();
     renderAthletes();
 }
+function updateGoogleSheet(athleteId, timeString) {
+    const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwd2dmoqXdXcnZCCNjJLEN6YskOPWDdQYfeRfZDAb1HI5T0liAQ-qnpXkU6iP7HNnA0Aw/exec';
+    
+    fetch(`${WEBAPP_URL}?id=${athleteId}&time=${encodeURIComponent(timeString)}`)
+        .then(response => response.json())
+        .then(data => {
+            console.log('Update successful:', data);
+        })
+        .catch(error => {
+            console.error('Error updating sheet:', error);
+        });
+}
