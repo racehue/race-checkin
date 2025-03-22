@@ -517,305 +517,357 @@ function setupEventListeners() {
     document.addEventListener('keydown', (e) => {
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
             return;
-        }
-        if ((e.ctrlKey && e.key === 'r') || e.key === 'F5') {
-            e.preventDefault();
-            fetchAthletes();
-        }
-        if (e.key === 'Enter') {
-            const selectedCards = document.querySelectorAll('.athlete-card.selected');
-            if (selectedCards.length > 0) {
-                e.preventDefault();
-                DOM.checkinBtn.click();
-            }
-        }
-        if (e.key === 'p' || e.key === 'P') {
-            const selectedCards = document.querySelectorAll('.athlete-card.selected');
-            if (selectedCards.length === 1) {
-                e.preventDefault();
-                DOM.takePhotoBtn.click();
-            }
-        }
-        if (e.key === 'Escape' && DOM.modal.style.display === 'flex') {
-            e.preventDefault();
+// Keyboard shortcuts
+        if (e.key === 'Escape') {
             closeModal();
+        } else if (e.key === 'Enter' && !DOM.modal.classList.contains('hidden')) {
+            if (DOM.webcamPreview.classList.contains('active')) {
+                capturePhoto();
+            } else if (DOM.capturedPhoto.classList.contains('active')) {
+                confirmPhoto();
+            }
+        }
+    });
+    // Add touch support for mobile devices
+    if ('ontouchstart' in window) {
+        addTouchSupport();
+    }
+}
+
+// Add touch support for mobile devices
+function addTouchSupport() {
+    let touchStartTime;
+    let touchStartElement;
+    
+    document.addEventListener('touchstart', (e) => {
+        touchStartTime = Date.now();
+        touchStartElement = e.target.closest('.athlete-card');
+    }, { passive: true });
+    
+    document.addEventListener('touchend', (e) => {
+        const touchEndTime = Date.now();
+        const touchDuration = touchEndTime - touchStartTime;
+        
+        // Long press (similar to shift+click)
+        if (touchDuration > 500 && touchStartElement) {
+            e.preventDefault();
+            if (!touchStartElement.classList.contains('selected')) {
+                touchStartElement.classList.add('selected');
+            } else {
+                touchStartElement.classList.remove('selected');
+            }
         }
     });
 }
 
-// Show camera permission request with instructions
-function showCameraPermissionRequest() {
-    const permissionDialog = document.createElement('div');
-    permissionDialog.className = 'camera-permission-dialog';
-    permissionDialog.innerHTML = `
-        <h3>Cần quyền truy cập camera</h3>
-        <p>Để chụp ảnh check-in, ứng dụng cần quyền truy cập camera của bạn.</p>
-        <div class="button-group">
-            <button id="permission-ok" class="btn primary">Cho phép</button>
-            <button id="permission-cancel" class="btn secondary">Hủy</button>
-        </div>
-    `;
-    document.body.appendChild(permissionDialog);
-    document.getElementById('permission-ok').addEventListener('click', () => {
-        permissionDialog.remove();
-        openCamera();
-    });
-    document.getElementById('permission-cancel').addEventListener('click', () => {
-        permissionDialog.remove();
+// Set active filter button
+function setActiveFilterButton(type, value) {
+    const selector = type === 'distance' ? '[data-filter]' : '[data-gender]';
+    const attribute = type === 'distance' ? 'data-filter' : 'data-gender';
+    
+    document.querySelectorAll(selector).forEach(btn => {
+        if (btn.getAttribute(attribute) === value) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
     });
 }
 
-// Optimize image before upload
+// Open camera modal
+function openCamera() {
+    DOM.modal.classList.remove('hidden');
+    DOM.webcamPreview.classList.add('active');
+    DOM.capturedPhoto.classList.remove('active');
+    DOM.captureBtn.classList.remove('hidden');
+    DOM.retakeBtn.classList.add('hidden');
+    DOM.confirmBtn.classList.add('hidden');
+    
+    // Access camera
+    navigator.mediaDevices.getUserMedia({ 
+        video: { 
+            facingMode: 'environment',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+        } 
+    })
+    .then(stream => {
+        videoStream = stream;
+        DOM.webcamPreview.srcObject = stream;
+        DOM.webcamPreview.play();
+    })
+    .catch(err => {
+        console.error('Error accessing camera:', err);
+        showNotification('Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập.', 'error');
+        closeModal();
+    });
+}
+
+// Capture photo from webcam
+function capturePhoto() {
+    if (!videoStream) {
+        showNotification('Camera chưa được khởi tạo', 'error');
+        return;
+    }
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = DOM.webcamPreview.videoWidth;
+    canvas.height = DOM.webcamPreview.videoHeight;
+    const ctx = canvas.getContext('2d');
+    
+    // Draw video frame to canvas
+    ctx.drawImage(DOM.webcamPreview, 0, 0, canvas.width, canvas.height);
+    
+    // Convert to data URL
+    capturedImageURL = canvas.toDataURL('image/jpeg', 0.8);
+    
+    // Display captured photo
+    DOM.capturedPhoto.src = capturedImageURL;
+    DOM.webcamPreview.classList.remove('active');
+    DOM.capturedPhoto.classList.add('active');
+    DOM.captureBtn.classList.add('hidden');
+    DOM.retakeBtn.classList.remove('hidden');
+    DOM.confirmBtn.classList.remove('hidden');
+}
+
+// Retake photo
+function retakePhoto() {
+    capturedImageURL = '';
+    DOM.webcamPreview.classList.add('active');
+    DOM.capturedPhoto.classList.remove('active');
+    DOM.captureBtn.classList.remove('hidden');
+    DOM.retakeBtn.classList.add('hidden');
+    DOM.confirmBtn.classList.add('hidden');
+}
+
+// Optimize image for better performance
 function optimizeImage(dataUrl) {
     return new Promise((resolve, reject) => {
         const img = new Image();
-        img.onload = () => {
+        img.onload = function() {
             const canvas = document.createElement('canvas');
-            const MAX_WIDTH = 800;
-            const MAX_HEIGHT = 600;
+            // Target size around 400px width for good quality but smaller file size
+            const maxWidth = 400;
             let width = img.width;
             let height = img.height;
-            if (width > height) {
-                if (width > MAX_WIDTH) {
-                    height *= MAX_WIDTH / width;
-                    width = MAX_WIDTH;
-                }
-            } else {
-                if (height > MAX_HEIGHT) {
-                    width *= MAX_HEIGHT / height;
-                    height = MAX_HEIGHT;
-                }
+            
+            if (width > maxWidth) {
+                height = (maxWidth / width) * height;
+                width = maxWidth;
             }
+            
             canvas.width = width;
             canvas.height = height;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
-            resolve(canvas.toDataURL('image/jpeg', 0.7));
+            
+            // Compress to JPEG with 0.7 quality
+            const optimizedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+            resolve(optimizedDataUrl);
         };
         img.onerror = reject;
         img.src = dataUrl;
     });
 }
 
-function setActiveFilterButton(filterType, filterValue) {
-    const buttons = filterType === 'distance' ? DOM.distanceFilters : DOM.genderFilters;
-    buttons.forEach(button => {
-        if (button.dataset[filterType] === filterValue) {
-            button.classList.add('active');
-            button.classList.remove('bg-gray-300', 'text-gray-700', 'hover:bg-gray-400');
-            button.classList.add('bg-blue-500', 'text-white', 'hover:bg-blue-600');
-        } else {
-            button.classList.remove('active');
-            button.classList.remove('bg-blue-500', 'text-white', 'hover:bg-blue-600');
-            button.classList.add('bg-gray-300', 'text-gray-700', 'hover:bg-gray-400');
-        }
-    });
-}
-
-// Function to add GitHub buttons to the interface
-function addGitHubButtons() {
-    const actionArea = document.querySelector('.action-buttons');
-    if (!actionArea) return;
-    const exportBtn = document.createElement('button');
-    exportBtn.id = 'github-export-btn';
-    exportBtn.className = 'action-btn';
-    exportBtn.innerHTML = '<i class="fas fa-download"></i> Xuất JSON';
-    exportBtn.addEventListener('click', exportDataForGitHub);
-    actionArea.appendChild(exportBtn);
-    const commitBtn = document.createElement('button');
-    commitBtn.id = 'github-commit-btn';
-    commitBtn.className = 'action-btn';
-    commitBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Đẩy lên GitHub';
-    commitBtn.addEventListener('click', () => {
-        if (confirm('Bạn có chắc muốn cập nhật dữ liệu VĐV lên GitHub không?')) {
-            commitToGitHub();
-        }
-    });
-    actionArea.appendChild(commitBtn);
-}
-
-// Function to export athlete data to JSON format for GitHub
-function exportDataForGitHub() {
-    const exportData = {
-        lastUpdated: new Date().toISOString(),
-        totalAthletes: athletes.length,
-        checkedInCount: athletes.filter(a => a.checkedIn).length,
-        athletes: athletes.map(athlete => ({
-            id: athlete.id,
-            name: athlete.name,
-            gender: athlete.gender,
-            distance: athlete.distance,
-            bib: athlete.bib,
-            checkedIn: athlete.checkedIn,
-            checkinTime: athlete.checkinTime,
-            photoUrl: athlete.photoUrl
-        }))
-    };
-    const jsonData = JSON.stringify(exportData, null, 2);
-    const blob = new Blob([jsonData], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'athletes-data.json';
-    a.click();
-    URL.revokeObjectURL(url);
-    showNotification('Đã xuất dữ liệu JSON thành công');
-    console.log('Data exported for GitHub. You can now commit this file to your repository.');
-}
-
-// Function to commit athlete data directly to GitHub
-async function commitToGitHub() {
-    showNotification('Đang cập nhật lên GitHub...', 'info');
-    const exportData = {
-        lastUpdated: new Date().toISOString(),
-        totalAthletes: athletes.length,
-        checkedInCount: athletes.filter(a => a.checkedIn).length,
-        athletes: athletes.map(athlete => ({
-            id: athlete.id,
-            name: athlete.name,
-            gender: athlete.gender,
-            distance: athlete.distance,
-            bib: athlete.bib,
-            checkedIn: athlete.checkedIn,
-            checkinTime: athlete.checkinTime,
-            photoUrl: athlete.photoUrl
-        }))
-    };
-    const content = JSON.stringify(exportData, null, 2);
-    const contentEncoded = btoa(unescape(encodeURIComponent(content)));
-    try {
-        let sha;
-        try {
-            const fileResponse = await fetch(
-                `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH}`,
-                {
-                    headers: {
-                        'Authorization': `token ${GITHUB_TOKEN}`,
-                        'Accept': 'application/vnd.github.v3+json'
-                    }
-                }
-            );
-            if (fileResponse.ok) {
-                const fileData = await fileResponse.json();
-                sha = fileData.sha;
-            }
-        } catch (error) {
-            console.log('File does not exist yet, creating new file');
-        }
-        const response = await fetch(
-            `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH}`,
-            {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `token ${GITHUB_TOKEN}`,
-                    'Accept': 'application/vnd.github.v3+json',
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    message: `Cập nhật dữ liệu VĐV - ${new Date().toLocaleString('vi-VN')}`,
-                    content: contentEncoded,
-                    branch: GITHUB_BRANCH,
-                    sha
-                })
-            }
-        );
-        if (response.ok) {
-            const result = await response.json();
-            console.log('Successfully committed to GitHub:', result);
-            showNotification('Đã cập nhật thành công lên GitHub!');
-        } else {
-            const error = await response.json();
-            console.error('Error committing to GitHub:', error);
-            showNotification('Không thể cập nhật lên GitHub. Xem console để biết thêm chi tiết.', 'error');
-        }
-    } catch (error) {
-        console.error('Exception when committing to GitHub:', error);
-        showNotification('Lỗi kết nối tới GitHub API', 'error');
-    }
-}
-
-// Use test data for development
-function useTestData() {
-    const testData = [
-        { id: "1", name: "Nguyễn Văn A", gender: "Nam", distance: "42K", bib: "A001", checkedIn: false, checkinTime: "", photoUrl: "" },
-        { id: "2", name: "Trần Thị B", gender: "Nữ", distance: "21K", bib: "B002", checkedIn: true, checkinTime: "20/03/2025 08:15", photoUrl: "https://via.placeholder.com/150" },
-        { id: "3", name: "Phạm Văn C", gender: "Nam", distance: "10K", bib: "C003", checkedIn: false, checkinTime: "", photoUrl: "" },
-        { id: "4", name: "Lê Thị D", gender: "Nữ", distance: "5K", bib: "D004", checkedIn: true, checkinTime: "20/03/2025 07:45", photoUrl: "https://via.placeholder.com/150" },
-        { id: "5", name: "Hoàng Văn E", gender: "Nam", distance: "42K", bib: "E005", checkedIn: false, checkinTime: "", photoUrl: "" }
-    ];
-    athletes = testData;
-    filteredAthletes = [...athletes];
-    updateResultsCount();
-    renderAthletes();
-    showNotification('Sử dụng dữ liệu test do không thể kết nối Google Sheets', 'info');
-}
-
-// Function to open the camera
-function openCamera() {
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then(stream => {
-                videoStream = stream;
-                DOM.webcamPreview.srcObject = stream;
-                DOM.webcamPreview.style.display = 'block';
-                DOM.capturedPhoto.style.display = 'none';
-                DOM.captureBtn.classList.remove('hidden');
-                DOM.retakeBtn.classList.add('hidden');
-                DOM.confirmBtn.classList.add('hidden');
-                DOM.modal.style.display = 'flex';
-            })
-            .catch(err => {
-                console.error('Error accessing the camera:', err);
-                showNotification('Không thể truy cập camera. Vui lòng kiểm tra cài đặt của bạn.', 'error');
-            });
-    } else {
-        showNotification('Trình duyệt của bạn không hỗ trợ truy cập camera.', 'error');
-    }
-}
-
-// Function to capture a photo
-function capturePhoto() {
-    const canvas = document.createElement('canvas');
-    canvas.width = DOM.webcamPreview.videoWidth;
-    canvas.height = DOM.webcamPreview.videoHeight;
-    const context = canvas.getContext('2d');
-    context.drawImage(DOM.webcamPreview, 0, 0, canvas.width, canvas.height);
-    capturedImageURL = canvas.toDataURL('image/png');
-    DOM.capturedPhoto.src = capturedImageURL;
-    DOM.webcamPreview.style.display = 'none';
-    DOM.capturedPhoto.style.display = 'block';
-    DOM.captureBtn.classList.add('hidden');
-    DOM.retakeBtn.classList.remove('hidden');
-    DOM.confirmBtn.classList.remove('hidden');
-}
-
-// Function to retake the photo
-function retakePhoto() {
-    DOM.webcamPreview.style.display = 'block';
-    DOM.capturedPhoto.style.display = 'none';
-    DOM.captureBtn.classList.remove('hidden');
-    DOM.retakeBtn.classList.add('hidden');
-    DOM.confirmBtn.classList.add('hidden');
-    capturedImageURL = '';
-}
-
-// Function to confirm the photo
+// Confirm and save photo
 function confirmPhoto() {
-    if (selectedAthleteId) {
-        checkInAthlete(selectedAthleteId);
-        closeModal();
-    } else {
-        showNotification('Không tìm thấy ID vận động viên. Vui lòng thử lại.', 'error');
+    closeModal();
+    if (selectedAthleteId && capturedImageURL) {
+        // First update UI immediately
+        const athlete = athletes.find(a => a.id === selectedAthleteId);
+        if (athlete) {
+            athlete.photoUrl = capturedImageURL;
+            
+            // Check if athlete is already checked in
+            if (!athlete.checkedIn) {
+                const shouldCheckIn = confirm('Xác nhận check-in cho VĐV này luôn?');
+                if (shouldCheckIn) {
+                    checkInAthlete(selectedAthleteId);
+                } else {
+                    // Just update the photo
+                    updateGoogleSheet(selectedAthleteId, athlete.checkinTime || '', capturedImageURL);
+                }
+            } else {
+                // Just update the photo
+                updateGoogleSheet(selectedAthleteId, athlete.checkinTime, capturedImageURL);
+            }
+            
+            renderAthletes();
+            showNotification('Ảnh đã được cập nhật', 'success');
+        }
     }
+    capturedImageURL = '';
+    selectedAthleteId = null;
 }
 
-// Function to close the modal
+// Close camera modal and clean up
 function closeModal() {
-    DOM.modal.style.display = 'none';
+    DOM.modal.classList.add('hidden');
     if (videoStream) {
         videoStream.getTracks().forEach(track => track.stop());
         videoStream = null;
     }
-    selectedAthleteId = null;
-    capturedImageURL = '';
+    DOM.webcamPreview.srcObject = null;
 }
+
+// Add GitHub buttons for data export and sync
+function addGitHubButtons() {
+    const actionArea = document.querySelector('.action-buttons');
+    if (!actionArea) return;
+    
+    const exportBtn = document.createElement('button');
+    exportBtn.className = 'action-btn secondary';
+    exportBtn.innerHTML = '<i class="fas fa-upload"></i> Xuất dữ liệu';
+    exportBtn.addEventListener('click', exportToGitHub);
+    actionArea.appendChild(exportBtn);
+}
+
+// Export data to GitHub repository
+function exportToGitHub() {
+    showNotification('Đang xuất dữ liệu lên GitHub...', 'info');
+    
+    const formattedData = JSON.stringify(athletes, null, 2);
+    const headers = {
+        'Authorization': `token ${GITHUB_TOKEN}`,
+        'Content-Type': 'application/json'
+    };
+    
+    // First get the SHA of the current file if it exists
+    fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH}`, {
+        method: 'GET',
+        headers
+    })
+    .then(response => response.json())
+    .then(fileInfo => {
+        const sha = fileInfo.sha;
+        const encodedContent = btoa(formattedData);
+        
+        // Now update the file with the new content
+        return fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH}`, {
+            method: 'PUT',
+            headers,
+            body: JSON.stringify({
+                message: `Update athletes data - ${new Date().toISOString()}`,
+                content: encodedContent,
+                sha,
+                branch: GITHUB_BRANCH
+            })
+        });
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to update GitHub file');
+        }
+        return response.json();
+    })
+    .then(() => {
+        showNotification('Dữ liệu đã được xuất thành công lên GitHub', 'success');
+    })
+    .catch(error => {
+        console.error('Error exporting to GitHub:', error);
+        showNotification('Lỗi khi xuất dữ liệu: ' + error.message, 'error');
+    });
+}
+
+// Use test data when all else fails
+function useTestData() {
+    athletes = [
+        {
+            id: 'test1',
+            name: 'Nguyễn Văn A',
+            gender: 'Nam',
+            distance: '42K',
+            bib: '1001',
+            checkedIn: false,
+            checkinTime: '',
+            photoUrl: ''
+        },
+        {
+            id: 'test2',
+            name: 'Trần Thị B',
+            gender: 'Nữ',
+            distance: '21K',
+            bib: '2001',
+            checkedIn: true,
+            checkinTime: '01/01/2023 08:00',
+            photoUrl: ''
+        }
+    ];
+    filteredAthletes = [...athletes];
+    updateResultsCount();
+    renderAthletes();
+    showNotification('Sử dụng dữ liệu mẫu', 'warning');
+}
+
+// Add progressive web app support
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+            .then(registration => {
+                console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            })
+            .catch(err => {
+                console.log('ServiceWorker registration failed: ', err);
+            });
+    });
+}
+
+// Add offline detection
+window.addEventListener('online', () => {
+    document.body.classList.remove('offline');
+    showNotification('Đã kết nối lại mạng', 'success');
+    if (document.getElementById('sync-button')) {
+        syncFailedUpdates();
+    }
+});
+
+window.addEventListener('offline', () => {
+    document.body.classList.add('offline');
+    showNotification('Mất kết nối mạng. Ứng dụng sẽ hoạt động trong chế độ ngoại tuyến.', 'warning');
+});
+
+// Add performance metrics
+window.addEventListener('load', () => {
+    setTimeout(() => {
+        const timing = window.performance.timing;
+        const pageLoadTime = timing.loadEventEnd - timing.navigationStart;
+        console.log(`Page load time: ${pageLoadTime}ms`);
+        
+        // Report to analytics if needed
+        if (pageLoadTime > 3000) {
+            // Slow loading, might want to optimize
+            console.warn('Page loading slowly. Consider optimization.');
+        }
+    }, 0);
+});
+
+// Add error tracking
+window.addEventListener('error', event => {
+    console.error('Global error:', event.error);
+    // You could send this to a logging service
+    const errorTime = new Date().toISOString();
+    const errorMessage = event.message;
+    const errorStack = event.error ? event.error.stack : '';
+    const errorData = { time: errorTime, message: errorMessage, stack: errorStack };
+    
+    // Store errors locally
+    let errors = [];
+    try {
+        const storedErrors = localStorage.getItem('errorLog');
+        if (storedErrors) {
+            errors = JSON.parse(storedErrors);
+        }
+    } catch (e) {
+        // Reset if corrupted
+        errors = [];
+    }
+    
+    errors.push(errorData);
+    // Keep only recent errors
+    if (errors.length > 20) {
+        errors = errors.slice(-20);
+    }
+    
+    localStorage.setItem('errorLog', JSON.stringify(errors));
+});
