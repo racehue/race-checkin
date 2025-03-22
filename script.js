@@ -1,16 +1,15 @@
 // Google Sheets API setup
-const SHEET_ID = '1kdt68gFOrTyirvo69oRDpAJDM7y_iGxvXM3HLDb57kw';
-const API_KEY = 'AIzaSyAMjzUR6DiIiSBkxaqtohn4YJqlm9njUu0';
+const SHEET_ID = 'YOUR_SHEET_ID'; // Thay bằng ID của Google Sheet
+const API_KEY = 'YOUR_API_KEY'; // Thay bằng Google API Key
 const SHEET_NAME = 'athletes';
 const API_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}`;
 // GitHub repository details
-const GITHUB_OWNER = 'racehue';
-const GITHUB_REPO = 'race-check-in';
+const GITHUB_OWNER = 'YOUR_GITHUB_USERNAME'; // Thay bằng username GitHub
+const GITHUB_REPO = 'YOUR_REPOSITORY_NAME'; // Thay bằng tên repository
 const GITHUB_PATH = 'data/athletes.json';
-const GITHUB_BRANCH = 'main';
-const GITHUB_TOKEN = 'ghp_11BQPVGFI0zOa7bCH0l1Bp_u0OlKmIACymFgikVSoTKHaTKonB7a7nr8EuYck1ZHpVTHPKOH2AeiL43Mnk'; // Nên lưu trữ an toàn trong biến môi trường
-// Web App URL for Google Sheets
-const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwd2dmoqXdXcnZCCNjJLEN6YskOPWDdQYfeRfZDAb1HI5T0liAQ-qnpXkU6iP7HNnA0Aw/exec';
+const GITHUB_DATA_URL = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/main/${GITHUB_PATH}`;
+// Web App URL for Google Sheets (Google Apps Script)
+const WEBAPP_URL = 'YOUR_WEBAPP_URL'; // Thay bằng URL của Google Apps Script Web App
 
 // Global variables
 let athletes = [];
@@ -90,16 +89,19 @@ function renderAthletes() {
             </div>
             <div class="flex gap-2">
                 <img src="${athlete.photo || 'placeholder.png'}" alt="Ảnh của ${athlete.name}" class="w-16 h-16 rounded-md object-cover">
-                <button class="checkin-button action-btn bg-yellow-500 hover:bg-yellow-600 text-gray-800 font-semibold rounded-md shadow-md transition-all duration-200 px-3 py-1.5 flex items-center gap-1.5" data-athlete-id="${athlete.id}" aria-label="Check-in cho ${athlete.name}">
+                <button class="checkin-button action-btn bg-yellow-500 hover:bg-yellow-600 text-gray-800 font-semibold rounded-md shadow-md transition-all duration-200 px-3 py-1.5 flex items-center gap-1.5" data-athlete-id="${athlete.id}" aria-label="Check-in cho ${athlete.name}" ${athlete.checkedIn ? 'disabled' : ''}>
                     <i class="fas fa-check-circle"></i> <span class="hidden sm:inline">Check-in</span>
                 </button>
             </div>
         `;
-        athleteCard.querySelector('.checkin-button').addEventListener('click', () => {
-            selectedAthleteId = athlete.id;
-            renderAthletes();
-            openPhotoModal();
-        });
+        const checkinButton = athleteCard.querySelector('.checkin-button');
+        if (!athlete.checkedIn) {
+            checkinButton.addEventListener('click', () => {
+                selectedAthleteId = athlete.id;
+                renderAthletes();
+                openPhotoModal();
+            });
+        }
         athletesList.appendChild(athleteCard);
     });
     resultsCount.textContent = `[${filteredAthletes.length}/${athletes.length}]`;
@@ -122,20 +124,10 @@ function openPhotoModal() {
             })
             .catch(error => {
                 console.error('Error accessing webcam:', error);
-                const messages = {
-                    NotAllowedError: ['Truy cập webcam bị từ chối. Vui lòng cho phép truy cập.', 'Vui lòng cho phép truy cập webcam để tiếp tục.'],
-                    NotFoundError: ['Không tìm thấy webcam. Vui lòng kết nối thiết bị.', 'Không tìm thấy webcam. Vui lòng kết nối thiết bị và thử lại.'],
-                    default: [`Lỗi webcam: ${error.message}`, `Lỗi khi truy cập webcam: ${error.message}`]
-                };
-                const [notificationMsg, feedbackMsg] = messages[error.name] || messages.default;
-                showNotification(notificationMsg, 'error');
-                photoFeedback.textContent = feedbackMsg;
+                showNotification('Lỗi truy cập webcam. Vui lòng kiểm tra quyền truy cập.', 'error');
+                photoFeedback.textContent = 'Không thể truy cập webcam. Vui lòng kiểm tra thiết bị và quyền truy cập.';
                 photoFeedback.classList.remove('hidden');
             });
-    } else {
-        showNotification('Trình duyệt không hỗ trợ webcam.', 'error');
-        photoFeedback.textContent = 'Trình duyệt không hỗ trợ webcam. Vui lòng sử dụng trình duyệt khác.';
-        photoFeedback.classList.remove('hidden');
     }
 }
 
@@ -219,37 +211,22 @@ function updateAthleteData(athlete) {
                     store.put(athlete);
                 }
             } else {
-                showNotification('Lỗi khi cập nhật dữ liệu. Vui lòng thử lại.', 'error');
                 throw new Error(result.message);
             }
-        })
-        .catch(error => {
-            showNotification('Lỗi kết nối mạng. Dữ liệu sẽ được lưu cục bộ.', 'error');
-            throw error;
         });
 }
 
 function saveAthleteData(data) {
-    try {
-        localStorage.setItem('athleteData', JSON.stringify(data));
-    } catch (error) {
-        showNotification('Lỗi khi lưu dữ liệu cục bộ.', 'warning');
-    }
+    localStorage.setItem('athleteData', JSON.stringify(data));
 }
 
 function loadAthleteData() {
-    try {
-        const data = localStorage.getItem('athleteData');
-        return data ? JSON.parse(data) : [];
-    } catch (error) {
-        showNotification('Lỗi khi tải dữ liệu cục bộ.', 'error');
-        return [];
-    }
+    const data = localStorage.getItem('athleteData');
+    return data ? JSON.parse(data) : [];
 }
 
 function initDatabase() {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
-    request.onerror = () => showNotification('Lỗi khởi tạo cơ sở dữ liệu.', 'error');
     request.onsuccess = (event) => {
         db = event.target.result;
         loadInitialData();
@@ -259,10 +236,6 @@ function initDatabase() {
         if (!db.objectStoreNames.contains('athletes')) {
             const store = db.createObjectStore('athletes', { keyPath: 'id' });
             store.createIndex('bib', 'bib', { unique: true });
-            store.createIndex('name', 'name', { unique: false });
-            store.createIndex('distance', 'distance', { unique: false });
-            store.createIndex('gender', 'gender', { unique: false });
-            store.createIndex('checkedIn', 'checkedIn', { unique: false });
         }
     };
 }
@@ -275,55 +248,30 @@ function fetchAthleteData() {
     refreshBtn.disabled = true;
     refreshBtn.querySelector('.fa-sync').classList.add('hidden');
     refreshBtn.querySelector('.fa-spinner').classList.remove('hidden');
-    return fetch(API_URL)
-        .then(response => {
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            return response.json();
-        })
+    return fetch(GITHUB_DATA_URL) // Fetch từ GitHub thay vì Google Sheets trực tiếp
+        .then(response => response.json())
         .then(data => {
-            if (data.values && data.values.length > 0) {
-                athletes = data.values.slice(1).map((row, i) => {
-                    try {
-                        return {
-                            id: parseInt(row[0]),
-                            bib: row[1],
-                            name: row[2],
-                            gender: row[3],
-                            distance: row[4],
-                            checkedIn: row[5] === 'TRUE',
-                            photo: row[6] || ''
-                        };
-                    } catch (e) {
-                        showNotification(`Dữ liệu hàng ${i + 2} không hợp lệ.`, 'error');
-                        return null;
-                    }
-                }).filter(Boolean);
-                saveAthleteData(athletes);
-                if (db) {
-                    const transaction = db.transaction(['athletes'], 'readwrite');
-                    const store = transaction.objectStore('athletes');
-                    store.clear();
-                    athletes.forEach(athlete => store.add(athlete));
-                    return new Promise((resolve) => {
-                        transaction.oncomplete = () => {
-                            renderAthletes();
-                            showNotification('Dữ liệu đã được cập nhật.', 'success');
-                            resolve();
-                        };
-                    });
-                } else {
-                    renderAthletes();
-                    showNotification('Dữ liệu đã được cập nhật.', 'success');
-                    return Promise.resolve();
-                }
-            } else {
-                showNotification('Không có dữ liệu vận động viên.', 'warning');
-                return Promise.resolve();
+            athletes = data.map((row, i) => ({
+                id: parseInt(row[0]),
+                bib: row[1],
+                name: row[2],
+                gender: row[3],
+                distance: row[4],
+                checkedIn: row[5] === 'TRUE',
+                photo: row[6] || ''
+            }));
+            saveAthleteData(athletes);
+            if (db) {
+                const transaction = db.transaction(['athletes'], 'readwrite');
+                const store = transaction.objectStore('athletes');
+                store.clear();
+                athletes.forEach(athlete => store.add(athlete));
             }
+            renderAthletes();
+            showNotification('Dữ liệu đã được cập nhật từ GitHub.', 'success');
         })
         .catch(() => {
-            showNotification('Lỗi tải dữ liệu. Vui lòng kiểm tra mạng.', 'error');
-            return Promise.reject();
+            showNotification('Lỗi tải dữ liệu từ GitHub. Vui lòng kiểm tra mạng.', 'error');
         })
         .finally(() => {
             refreshBtn.disabled = false;
@@ -350,7 +298,7 @@ function loadInitialData() {
 
 // Event Listeners
 searchInput.addEventListener('input', debounce(renderAthletes));
-refreshBtn.addEventListener('click', () => fetchAthleteData());
+refreshBtn.addEventListener('click', fetchAthleteData);
 checkinBtn.addEventListener('click', () => {
     if (selectedAthleteId) openPhotoModal();
     else showNotification('Vui lòng chọn vận động viên để check-in.', 'warning');
@@ -358,24 +306,16 @@ checkinBtn.addEventListener('click', () => {
 distanceFilterBtns.forEach(btn => {
     btn.addEventListener('click', function() {
         selectedDistance = this.dataset.filter;
-        distanceFilterBtns.forEach(b => {
-            b.classList.remove('active');
-            b.setAttribute('aria-pressed', 'false');
-        });
+        distanceFilterBtns.forEach(b => b.classList.remove('active'));
         this.classList.add('active');
-        this.setAttribute('aria-pressed', 'true');
         renderAthletes();
     });
 });
 genderFilterBtns.forEach(btn => {
     btn.addEventListener('click', function() {
         selectedGender = this.dataset.gender;
-        genderFilterBtns.forEach(b => {
-            b.classList.remove('active');
-            b.setAttribute('aria-pressed', 'false');
-        });
+        genderFilterBtns.forEach(b => b.classList.remove('active'));
         this.classList.add('active');
-        this.setAttribute('aria-pressed', 'true');
         renderAthletes();
     });
 });
