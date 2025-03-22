@@ -10,74 +10,79 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
-    <!-- Header -->
-    <header class="fixed top-0 left-0 right-0 bg-blue-500 text-white py-4 text-center shadow-md z-50">
+    <header class="fixed top-0 left-0 right-0 bg-gradient-to-r from-blue-500 to-purple-500 text-white py-4 text-center shadow-md z-50 transition-all duration-300">
         <div class="container mx-auto px-4 flex justify-between items-center">
-            <h1 class="text-xl font-semibold">Race Check-in</h1>
+            <h1 class="text-xl font-semibold tracking-tight">Race Check-in</h1>
             <div class="flex gap-2">
-                <button id="refresh-btn" class="action-btn bg-green-500 hover:bg-green-600">
-                    <i class="fas fa-sync"></i> Làm mới
+                <button id="refresh-btn" class="action-btn bg-green-500 hover:bg-green-600 text-white font-semibold rounded-md shadow-md transition-all duration-200 transform hover:scale-105 flex items-center gap-2">
+                    <i class="fas fa-sync"></i> <span class="hidden sm:inline">Làm mới</span>
                 </button>
-                <button id="checkin-btn" class="action-btn bg-yellow-500 hover:bg-yellow-600">
-                    <i class="fas fa-check-double"></i> Check-in
+                <button id="checkin-btn" class="action-btn bg-yellow-500 hover:bg-yellow-600 text-gray-800 font-semibold rounded-md shadow-md transition-all duration-200 transform hover:scale-105 flex items-center gap-2">
+                    <i class="fas fa-check-double"></i> <span class="hidden sm:inline">Check-in</span>
                 </button>
             </div>
         </div>
     </header>
-
-    <!-- Main Content -->
     <div class="container mx-auto px-4 py-6 flex-grow mt-20">
-        <div class="bg-white rounded-md shadow-md p-4 mb-4">
-            <input
-                type="text"
-                id="search-input"
-                placeholder="Tìm kiếm vận động viên..."
-                class="w-full px-4 py-2 rounded-md border border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-            />
-        </div>
-        <div class="flex flex-wrap gap-4 justify-center mb-4">
-            <button class="action-btn" id="import-btn"><i class="fas fa-file-import"></i> Nhập VĐV</button>
-            <button data-filter="all" class="filter-btn action-btn bg-gray-300 text-gray-700 hover:bg-gray-400">Tất cả</button>
-            <button data-filter="42K" class="filter-btn action-btn bg-gray-300 text-gray-700 hover:bg-gray-400">42K</button>
-            <button data-filter="21K" class="filter-btn action-btn bg-gray-300 text-gray-700 hover:bg-gray-400">21K</button>
-            <button data-filter="10K" class="filter-btn action-btn bg-gray-300 text-gray-700 hover:bg-gray-400">10K</button>
-            <button data-filter="5K" class="filter-btn action-btn bg-gray-300 text-gray-700 hover:bg-gray-400">5K</button>
-        </div>
-        <div class="flex flex-wrap gap-2 justify-center mb-4">
-            <button data-gender="all" class="gender-filter-btn action-btn bg-gray-300 text-gray-700 hover:bg-gray-400">Tất cả</button>
-            <button data-gender="nam" class="gender-filter-btn action-btn bg-gray-300 text-gray-700 hover:bg-gray-400">Nam</button>
-            <button data-gender="nữ" class="gender-filter-btn action-btn bg-gray-300 text-gray-700 hover:bg-gray-400">Nữ</button>
-        </div>
-        <div class="flex justify-between items-center mb-4">
-            <span id="results-count" class="text-gray-600 font-medium">[0/0]</span>
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6 transition-all duration-300 hover:shadow-lg">
+            <div class="flex flex-col sm:flex-row gap-4 items-center">
+                <input type="text" id="search-input" placeholder="Tìm kiếm vận động viên..." class="w-full sm:w-auto px-4 py-2 rounded-md border border-gray-300 focus:border-blue-500 focus:ring-blue-500 transition-all duration-200">
+                <div class="flex items-center gap-4">
+                    <div class="filter-group flex items-center gap-2">
+                        <label for="distance-filter" class="text-gray-700 font-medium">Khoảng cách:</label>
+                        <div class="button-group flex gap-2">
+                            <button data-filter="all" class="distance-filter-btn action-btn bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-md transition-all duration-200 px-3 py-1.5 font-medium active">Tất cả</button>
+                            <button data-filter="5km" class="distance-filter-btn action-btn bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-md transition-all duration-200 px-3 py-1.5 font-medium">5km</button>
+                            <button data-filter="10km" class="distance-filter-btn action-btn bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-md transition-all duration-200 px-3 py-1.5 font-medium">10km</button>
+                            <button data-filter="21km" class="distance-filter-btn action-btn bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-md transition-all duration-200 px-3 py-1.5 font-medium">21km</button>
+                            <button data-filter="42km" class="distance-filter-btn action-btn bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-md transition-all duration-200 px-3 py-1.5 font-medium">42km</button>
+                        </div>
+                    </div>
+                    <div class="filter-group flex items-center gap-2">
+                        <label for="gender-filter" class="text-gray-700 font-medium">Giới tính:</label>
+                        <div class="button-group flex gap-2">
+                            <button data-gender="all" class="gender-filter-btn action-btn bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-md transition-all duration-200 px-3 py-1.5 font-medium active">Tất cả</button>
+                            <button data-gender="nam" class="gender-filter-btn action-btn bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-md transition-all duration-200 px-3 py-1.5 font-medium">Nam</button>
+                            <button data-gender="nữ" class="gender-filter-btn action-btn bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-md transition-all duration-200 px-3 py-1.5 font-medium">Nữ</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-between items-center mt-4">
+                <span id="results-count" class="text-gray-600 font-medium text-sm">[0/0]</span>
+            </div>
+            <div id="no-results" class="hidden no-results text-center py-4 text-gray-500 font-medium rounded-md bg-gray-50 border border-dashed border-gray-300">Không tìm thấy vận động viên nào.</div>
         </div>
         <div id="athletes-list" class="space-y-4"></div>
-        <div id="no-results" class="hidden no-results">Không tìm thấy vận động viên nào.</div>
     </div>
-
-    <!-- Footer -->
-    <footer class="bg-gray-200 text-gray-700 py-4 text-center mt-auto">
-        &copy; 2024 Race Check-in. All rights reserved.
+    <footer class="bg-gray-800 text-gray-300 py-4 text-center mt-auto transition-all duration-300">
+        <div class="container mx-auto px-4">
+            &copy; 2024 Race Check-in. All rights reserved.
+        </div>
     </footer>
-
-    <!-- Photo Modal -->
-    <div id="photo-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Chụp ảnh VĐV</h2>
-                <button id="close-modal" class="close-button"><i class="fas fa-times"></i></button>
+    <div id="photo-modal" class="modal fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 z-50 hidden transition-opacity duration-300">
+        <div class="modal-content relative top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg w-full max-w-md transition-all duration-300">
+            <div class="modal-header flex justify-between items-center p-4 border-b border-gray-200">
+                <h2 class="text-xl font-semibold text-gray-800">Chụp ảnh VĐV</h2>
+                <button id="close-modal" class="close-button action-btn text-gray-500 hover:text-gray-700 transition-colors duration-200">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
             </div>
-            <video id="webcam-preview" autoplay playsinline class="hidden"></video>
-            <img id="captured-photo" src="" alt="Captured Photo" class="hidden">
-            <div class="modal-footer">
-                <button id="capture-btn" class="capture-btn">Chụp ảnh</button>
-                <button id="retake-btn" class="retake-btn hidden">Chụp lại</button>
-                <button id="confirm-btn" class="confirm-btn hidden">Xác nhận</button>
+            <div class="modal-body p-4">
+                <div id="webcam-container" class="relative rounded-md overflow-hidden">
+                    <video id="webcam-preview" autoplay playsinline class="w-full max-h-[300px]"></video>
+                    <canvas id="photo-canvas" class="hidden absolute top-0 left-0 w-full h-full"></canvas>
+                </div>
+                <img id="captured-photo" src="" alt="Captured Photo" class="hidden rounded-md w-full max-h-[300px] object-cover">
+                <div id="photo-feedback" class="feedback mt-4 p-3 rounded-md text-center font-medium hidden"></div>
+            </div>
+            <div class="modal-footer flex justify-end p-4 gap-3 border-t border-gray-200">
+                <button id="capture-btn" class="capture-btn action-btn bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-md shadow-md transition-all duration-200 px-4 py-2">Chụp ảnh</button>
+                <button id="retake-btn" class="retake-btn action-btn bg-yellow-500 hover:bg-yellow-600 text-gray-800 font-semibold rounded-md shadow-md transition-all duration-200 px-4 py-2 hidden">Chụp lại</button>
+                <button id="confirm-btn" class="confirm-btn action-btn bg-green-500 hover:bg-green-600 text-white font-semibold rounded-md shadow-md transition-all duration-200 px-4 py-2 hidden">Xác nhận</button>
             </div>
         </div>
     </div>
-
-    <!-- Scripts -->
     <script src="script.js"></script>
 </body>
 </html>
