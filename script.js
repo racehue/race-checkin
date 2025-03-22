@@ -1,16 +1,15 @@
 // Google Sheets API setup
-const SHEET_ID = 'YOUR_SHEET_ID'; // Thay bằng ID của Google Sheet
-const API_KEY = 'YOUR_API_KEY'; // Thay bằng Google API Key
+const SHEET_ID = '1kdt68gFOrTyirvo69oRDpAJDM7y_iGxvXM3HLDb57kw';
+const API_KEY = 'AIzaSyAMjzUR6DiIiSBkxaqtohn4YJqlm9njUu0';
 const SHEET_NAME = 'athletes';
 const API_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}`;
 // GitHub repository details
-const GITHUB_OWNER = 'YOUR_GITHUB_USERNAME'; // Thay bằng username GitHub
-const GITHUB_REPO = 'YOUR_REPOSITORY_NAME'; // Thay bằng tên repository
+const GITHUB_OWNER = 'racehue';
+const GITHUB_REPO = 'race-check-in';
 const GITHUB_PATH = 'data/athletes.json';
 const GITHUB_DATA_URL = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/main/${GITHUB_PATH}`;
 // Web App URL for Google Sheets (Google Apps Script)
-const WEBAPP_URL = 'YOUR_WEBAPP_URL'; // Thay bằng URL của Google Apps Script Web App
-
+const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwd2dmoqXdXcnZCCNjJLEN6YskOPWDdQYfeRfZDAb1HI5T0liAQ-qnpXkU6iP7HNnA0Aw/exec';
 // Global variables
 let athletes = [];
 let filteredAthletes = [];
