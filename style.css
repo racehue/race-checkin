@@ -3,7 +3,7 @@
     box-sizing: border-box;
     margin: 0;
     padding: 0;
-    font-family: 'Inter', sans-serif; /* Sử dụng font Inter */
+    font-family: 'Inter', sans-serif;
 }
 
 body {
@@ -16,394 +16,88 @@ body {
 
 /* Header */
 header {
-    /* Thay đổi màu sắc header */
-    background: linear-gradient(to right, #6b7280, #374151); /* Màu xám đậm hơn */
+    background: linear-gradient(to right, #6b7280, #374151);
     color: white;
     text-align: center;
-    padding: 1.25rem 0;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    z-index: 100;
+    padding: 1rem 0;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    position: fixed;
+    width: 100%;
+    top: 0;
+    z-index: 1000;
+    transition: all 0.3s ease-in-out;
 }
 
-header h1 {
-    font-size: 1.875rem;
-    font-weight: 600; /* Sử dụng font weight 600 */
-    margin: 0;
-    letter-spacing: -0.05em;
-}
-
-/* Filters Section */
-.filters {
-    /* Thay đổi màu nền và thêm hiệu ứng đổ bóng */
-    background-color: #f3f4f6;
-    padding: 1.5rem;
-    border-radius: 0.5rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-    margin-bottom: 1.5rem;
-}
-
-.filter-group {
-    margin-bottom: 1rem;
-    flex: 1 1 100%; /* Default to full width on small screens */
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-}
-
-.filter-group p {
-    margin-bottom: 0.5rem;
-    font-weight: 600;
-    font-size: 0.875rem;
-    color: #4b5563;
-}
-
-.button-group {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-
+/* Smooth Hover Buttons */
 .action-btn {
     padding: 0.75rem 1.5rem;
     border: none;
     border-radius: 0.375rem;
     cursor: pointer;
     font-size: 0.875rem;
-    font-weight: 500; /* Medium font weight */
-    transition: all 0.2s ease;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 .action-btn:hover {
-    filter: brightness(95%);
-    transform: translateY(-1px);
+    filter: brightness(90%);
+    transform: scale(1.05);
 }
 
-.action-btn.active {
-    /* Màu nền đậm hơn khi được chọn */
-    background-color: #4f46e5;
-    color: white;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
-}
-
-.distance-filter-btn {
-    background-color: #e5e7eb;
-    color: #4b5563;
-}
-
-.distance-filter-btn:hover {
-    background-color: #d1d5db;
-}
-
-.gender-filter-btn {
-    background-color: #e5e7eb;
-    color: #4b5563;
-}
-
-.gender-filter-btn:hover {
-    background-color: #d1d5db;
-}
-
-#search-input {
-    padding: 0.75rem;
-    border-radius: 0.375rem;
-    border: 1px solid #d1d5db;
-    width: 100%;
-    font-size: 0.875rem;
-    transition: all 0.2s ease;
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06);
-}
-
-#search-input:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-}
-
-#results-count {
-    font-size: 0.875rem;
-    color: #6b7280;
-    margin-top: 1rem;
-}
-
+/* Athlete List Grid Layout */
 #athletes-list {
-    margin-top: 1.5rem;
     display: grid;
-    grid-template-columns: 1fr;
-    gap: 1.25rem;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+    padding: 1rem;
 }
 
 .athlete-card {
-    /* Thêm hiệu ứng đổ bóng và transition */
     background-color: white;
     border-radius: 0.5rem;
     padding: 1.25rem;
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
     align-items: center;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
     border: 1px solid #e0e0e0;
 }
 
 .athlete-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 6px 8px -1px rgba(0, 0, 0, 0.1), 0 3px 5px -1px rgba(0, 0, 0, 0.08);
+    transform: translateY(-5px);
+    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
 }
 
-.athlete-card.selected {
-    border: 2px solid #8b5cf6;
-    box-shadow: 0 6px 8px -1px rgba(139, 92, 246, 0.3), 0 3px 5px -1px rgba(139, 92, 246, 0.2);
-}
-
-.athlete-card div {
-    margin-right: 1rem;
-}
-
-.athlete-card img {
-    width: 4rem;
-    height: 4rem;
-    border-radius: 0.375rem;
-    object-fit: cover;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.checkin-button {
-    padding: 0.5rem 1rem;
-    border-radius: 0.375rem;
-    background-color: #f59e0b;
-    color: #1e293b;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.checkin-button:hover {
-    background-color: #d97706;
-    transform: translateY(-1px);
-}
-
-.no-results {
-    text-align: center;
-    padding: 1rem;
-    border-radius: 0.375rem;
-    background-color: #f8fafc;
-    border: 1px dashed #d1d5db;
-    margin-top: 1.5rem;
-    font-size: 0.875rem;
-    color: #6b7280;
-}
-
-/* Photo Modal */
-.modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 1000;
-    transition: opacity 0.3s ease;
-}
-
-.modal.show {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 1;
-}
-
-.modal-content {
-    background-color: white;
-    border-radius: 0.5rem;
-    padding: 1.5rem;
-    width: 90%;
-    max-width: 400px;
-    position: relative;
-    box-shadow: 0 6px 8px -1px rgba(0, 0, 0, 0.15), 0 3px 5px -1px rgba(0, 0, 0, 0.1);
-    transform: translateY(20px);
-    transition: transform 0.3s ease;
-}
-
-.modal.show .modal-content {
-    transform: translateY(0);
-}
-
-
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid #e5e7eb;
-}
-
-.modal-header h2 {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: #1f2937;
-}
-
-.close-button {
-    background-color: transparent;
-    border: none;
-    font-size: 1.5rem;
-    color: #6b7280;
-    cursor: pointer;
-    opacity: 0.7;
-    transition: opacity 0.2s ease;
-}
-
-.close-button:hover {
-    opacity: 1;
-}
-
-#webcam-preview,
-#captured-photo,
-#photo-canvas { /* Add style for photo-canvas */
-    width: 100%;
-    max-height: 300px;
-    border-radius: 0.375rem;
-    object-fit: cover;
-    margin-bottom: 1rem;
-    border: 1px solid #d1d5db;
-}
-
-#photo-canvas {
-    display: none;
+/* Loading Animation */
+.loader {
+    width: 50px;
+    height: 50px;
+    border: 5px solid #ddd;
+    border-top-color: #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
     position: absolute;
-    top: 0;
-    left: 0;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
 }
 
-.modal-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.75rem;
-    margin-top: 1.5rem;
-    padding-top: 1rem;
-    border-top: 1px solid #e5e7eb;
-}
-
-.capture-btn,
-.retake-btn,
-.confirm-btn {
-    padding: 0.75rem 1.5rem;
-    border: none;
-    border-radius: 0.375rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.capture-btn {
-    background-color: #3b82f6;
-    color: white;
-}
-
-.capture-btn:hover {
-    background-color: #2563eb;
-}
-
-.retake-btn {
-    background-color: #f59e0b;
-    color: #1e293b;
-}
-
-.retake-btn:hover {
-    background-color: #d97706;
-}
-
-.confirm-btn {
-    background-color: #10b981;
-    color: white;
-}
-
-.confirm-btn:hover {
-    background-color: #059669;
-}
-
-/* Notifications */
-.notification {
-    position: fixed;
-    top: 2rem;
-    right: 2rem;
-    padding: 1rem 1.5rem;
-    border-radius: 0.375rem;
-    font-size: 0.875rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    opacity: 0;
-    animation: slideIn 0.3s ease-out forwards, slideOut 0.3s 2.5s ease-in forwards;
-    z-index: 1000;
-}
-
-@keyframes slideIn {
+@keyframes spin {
     from {
-        transform: translateX(20px);
-        opacity: 0;
+        transform: translate(-50%, -50%) rotate(0deg);
     }
     to {
-        transform: translateX(0);
-        opacity: 1;
+        transform: translate(-50%, -50%) rotate(360deg);
     }
 }
 
-@keyframes slideOut {
-    from {
-        transform: translateX(0);
-        opacity: 1;
-    }
-    to {
-        transform: translateX(20px);
-        opacity: 0;
-    }
-}
-
-
-.notification.success {
-    background-color: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
-}
-
-.notification.error {
-    background-color: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
-}
-
-.notification.warning {
-    background-color: #fff3cd;
-    color: #856404;
-    border: 1px solid #ffeeba;
-}
-
-/* Responsive Styles */
+/* Responsive */
 @media (max-width: 768px) {
-    .filters {
-        flex-direction: column;
-    }
-    .filter-group {
-        flex: 1 1 100%;
-    }
-    .button-group {
-        justify-content: center;
-    }
-    header h1{
-        font-size: 1.5rem;
-    }
-    .header-buttons{
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-}
-
-@media (max-width: 640px){
-    .modal-content{
-        width: 95%;
-        max-width: 350px;
+    .action-btn {
+        width: 100%;
     }
 }
