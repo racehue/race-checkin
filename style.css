@@ -3,7 +3,7 @@
     box-sizing: border-box;
     margin: 0;
     padding: 0;
-    font-family: Arial, sans-serif;
+    font-family: 'Inter', sans-serif; /* Sử dụng font Inter */
 }
 
 body {
@@ -16,401 +16,394 @@ body {
 
 /* Header */
 header {
-    background-color: #0066cc;
+    /* Thay đổi màu sắc header */
+    background: linear-gradient(to right, #6b7280, #374151); /* Màu xám đậm hơn */
     color: white;
     text-align: center;
-    padding: 15px 0;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 1.25rem 0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    z-index: 100;
 }
 
 header h1 {
-    font-size: 1.8em;
+    font-size: 1.875rem;
+    font-weight: 600; /* Sử dụng font weight 600 */
     margin: 0;
+    letter-spacing: -0.05em;
 }
 
 /* Filters Section */
 .filters {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    padding: 10px 15px;
-    background-color: #f5f5f5;
-    border-bottom: 1px solid #ddd;
+    /* Thay đổi màu nền và thêm hiệu ứng đổ bóng */
+    background-color: #f3f4f6;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+    margin-bottom: 1.5rem;
 }
 
 .filter-group {
-    margin-bottom: 10px;
-    flex: 1 1 48%;
+    margin-bottom: 1rem;
+    flex: 1 1 100%; /* Default to full width on small screens */
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
 }
 
 .filter-group p {
-    margin-bottom: 5px;
-    font-weight: bold;
-    font-size: 0.9em;
-    color: #555;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #4b5563;
 }
 
 .button-group {
     display: flex;
-    gap: 5px;
+    gap: 0.5rem;
     flex-wrap: wrap;
 }
 
-.filter-btn {
-    padding: 8px 15px;
-    background-color: #e0e0e0;
+.action-btn {
+    padding: 0.75rem 1.5rem;
     border: none;
-    border-radius: 4px;
+    border-radius: 0.375rem;
     cursor: pointer;
-    font-size: 0.9em;
-    transition: all 0.3s ease;
+    font-size: 0.875rem;
+    font-weight: 500; /* Medium font weight */
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
-.filter-btn:hover {
-    background-color: #d1d1d1;
+.action-btn:hover {
+    filter: brightness(95%);
+    transform: translateY(-1px);
 }
 
-.filter-btn.active {
-    background-color: #4d94ff;
+.action-btn.active {
+    /* Màu nền đậm hơn khi được chọn */
+    background-color: #4f46e5;
     color: white;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
 }
 
-/* Refresh Button */
-#refresh-btn {
-    background-color: transparent;
-    color: #0066cc;
-    border: none;
-    cursor: pointer;
-    align-self: center;
-    font-size: 1em;
-    display: flex;
-    align-items: center;
-    gap: 5px;
+.distance-filter-btn {
+    background-color: #e5e7eb;
+    color: #4b5563;
 }
 
-#refresh-btn .loading-icon {
-    animation: spin 1s linear infinite;
+.distance-filter-btn:hover {
+    background-color: #d1d5db;
 }
 
-@keyframes spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+.gender-filter-btn {
+    background-color: #e5e7eb;
+    color: #4b5563;
 }
 
-/* Search Container */
-.search-container {
-    display: flex;
-    padding: 10px 15px;
-    background-color: #f0f8e8;
-    align-items: center;
-    border-bottom: 1px solid #ddd;
+.gender-filter-btn:hover {
+    background-color: #d1d5db;
 }
 
 #search-input {
-    flex-grow: 1;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 1em;
-    outline: none;
-    transition: border-color 0.3s ease;
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+    border: 1px solid #d1d5db;
+    width: 100%;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
 #search-input:focus {
-    border-color: #0066cc;
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
 #results-count {
-    margin-left: 10px;
-    color: #0066cc;
-    font-size: 0.9em;
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-top: 1rem;
 }
 
-/* Athletes List */
 #athletes-list {
-    padding: 10px 15px;
+    margin-top: 1.5rem;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
 }
 
 .athlete-card {
-    display: flex;
-    margin-bottom: 15px;
-    border-left: 4px solid #0066cc;
+    /* Thêm hiệu ứng đổ bóng và transition */
     background-color: white;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    border-radius: 4px;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border-radius: 0.5rem;
+    padding: 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+    border: 1px solid #e0e0e0;
 }
 
 .athlete-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    transform: translateY(-4px);
+    box-shadow: 0 6px 8px -1px rgba(0, 0, 0, 0.1), 0 3px 5px -1px rgba(0, 0, 0, 0.08);
 }
 
 .athlete-card.selected {
-    border-left-color: #ffcc00;
+    border: 2px solid #8b5cf6;
+    box-shadow: 0 6px 8px -1px rgba(139, 92, 246, 0.3), 0 3px 5px -1px rgba(139, 92, 246, 0.2);
 }
 
-.athlete-photo {
-    width: 100px;
-    padding: 10px;
+.athlete-card div {
+    margin-right: 1rem;
 }
 
-.athlete-photo img {
-    width: 100%;
-    height: auto;
-    border-radius: 4px;
+.athlete-card img {
+    width: 4rem;
+    height: 4rem;
+    border-radius: 0.375rem;
+    object-fit: cover;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.athlete-info {
-    flex-grow: 1;
-    padding: 10px;
+.checkin-button {
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    background-color: #f59e0b;
+    color: #1e293b;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
-.athlete-gender {
-    display: inline-block;
-    width: 30px;
-    height: 30px;
+.checkin-button:hover {
+    background-color: #d97706;
+    transform: translateY(-1px);
+}
+
+.no-results {
     text-align: center;
-    line-height: 30px;
-    font-weight: bold;
-    color: white;
-    border-radius: 50%;
-    font-size: 0.9em;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    background-color: #f8fafc;
+    border: 1px dashed #d1d5db;
+    margin-top: 1.5rem;
+    font-size: 0.875rem;
+    color: #6b7280;
 }
 
-.gender-m {
-    background-color: #66ccff;
-}
-
-.gender-f {
-    background-color: #ff99cc;
-}
-
-.athlete-name {
-    font-weight: bold;
-    margin: 5px 0;
-    font-size: 1.1em;
-}
-
-.bib-number {
-    font-size: 0.9em;
-    color: #555;
-}
-
-.checkin-status {
-    padding: 5px 10px;
-    border-radius: 4px;
-    font-size: 0.9em;
-    display: inline-block;
-}
-
-.checkin-status.checked {
-    background-color: #d4edda;
-    color: #155724;
-}
-
-.checkin-time {
-    text-align: right;
-    padding: 5px 10px;
-    font-size: 0.9em;
-    color: #666;
-}
-
-.email-btn {
-    background: none;
-    border: none;
-    color: #999;
-    font-size: 1.5em;
-    cursor: pointer;
-    padding: 10px;
-}
-
-/* Action Buttons */
-.action-buttons {
-    display: flex;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background-color: white;
-    box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
-    z-index: 1000;
-}
-
-.action-buttons button {
-    flex: 1;
-    padding: 15px 0;
-    border: none;
-    cursor: pointer;
-    font-weight: bold;
-    font-size: 1em;
-    transition: background-color 0.3s ease;
-}
-
-#checkin-btn {
-    background-color: #0066cc;
-    color: white;
-}
-
-#checkin-btn:hover {
-    background-color: #0052a3;
-}
-
-#import-btn {
-    background-color: #ffcc00;
-    color: #333;
-}
-
-#import-btn:hover {
-    background-color: #e6b800;
-}
-
-#github-export-btn {
-    background-color: #28a745;
-    color: white;
-}
-
-#github-export-btn:hover {
-    background-color: #218838;
-}
-
-#github-commit-btn {
-    background-color: #6c757d;
-    color: white;
-}
-
-#github-commit-btn:hover {
-    background-color: #5a6268;
-}
-
-/* Modal */
-#photo-modal {
+/* Photo Modal */
+.modal {
     display: none;
     position: fixed;
     top: 0;
     left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.7);
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
     z-index: 1000;
-    justify-content: center;
+    transition: opacity 0.3s ease;
+}
+
+.modal.show {
+    display: flex;
     align-items: center;
-    flex-direction: column;
+    justify-content: center;
+    opacity: 1;
+}
+
+.modal-content {
+    background-color: white;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    width: 90%;
+    max-width: 400px;
+    position: relative;
+    box-shadow: 0 6px 8px -1px rgba(0, 0, 0, 0.15), 0 3px 5px -1px rgba(0, 0, 0, 0.1);
+    transform: translateY(20px);
+    transition: transform 0.3s ease;
+}
+
+.modal.show .modal-content {
+    transform: translateY(0);
+}
+
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-header h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.close-button {
+    background-color: transparent;
+    border: none;
+    font-size: 1.5rem;
+    color: #6b7280;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+.close-button:hover {
+    opacity: 1;
 }
 
 #webcam-preview,
-#captured-photo {
-    width: 300px;
-    height: auto;
-    border-radius: 4px;
-    margin-bottom: 15px;
+#captured-photo,
+#photo-canvas { /* Add style for photo-canvas */
+    width: 100%;
+    max-height: 300px;
+    border-radius: 0.375rem;
+    object-fit: cover;
+    margin-bottom: 1rem;
+    border: 1px solid #d1d5db;
 }
 
-.modal-buttons {
+#photo-canvas {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.modal-footer {
     display: flex;
-    gap: 10px;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e5e7eb;
 }
 
-.modal-buttons button {
-    padding: 10px 20px;
+.capture-btn,
+.retake-btn,
+.confirm-btn {
+    padding: 0.75rem 1.5rem;
     border: none;
-    border-radius: 4px;
+    border-radius: 0.375rem;
+    font-weight: 600;
     cursor: pointer;
-    font-size: 1em;
-    font-weight: bold;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-#capture-btn {
-    background-color: #0066cc;
+.capture-btn {
+    background-color: #3b82f6;
     color: white;
 }
 
-#retake-btn {
-    background-color: #ffcc00;
-    color: #333;
+.capture-btn:hover {
+    background-color: #2563eb;
 }
 
-#confirm-btn {
-    background-color: #28a745;
+.retake-btn {
+    background-color: #f59e0b;
+    color: #1e293b;
+}
+
+.retake-btn:hover {
+    background-color: #d97706;
+}
+
+.confirm-btn {
+    background-color: #10b981;
     color: white;
 }
 
-#close-modal {
-    background-color: #dc3545;
-    color: white;
+.confirm-btn:hover {
+    background-color: #059669;
 }
 
 /* Notifications */
 .notification {
     position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 10px 20px;
-    border-radius: 4px;
-    font-size: 0.9em;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    opacity: 1;
-    transition: opacity 0.3s ease;
+    top: 2rem;
+    right: 2rem;
+    padding: 1rem 1.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    opacity: 0;
+    animation: slideIn 0.3s ease-out forwards, slideOut 0.3s 2.5s ease-in forwards;
+    z-index: 1000;
 }
+
+@keyframes slideIn {
+    from {
+        transform: translateX(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(20px);
+        opacity: 0;
+    }
+}
+
 
 .notification.success {
     background-color: #d4edda;
     color: #155724;
+    border: 1px solid #c3e6cb;
 }
 
 .notification.error {
     background-color: #f8d7da;
     color: #721c24;
+    border: 1px solid #f5c6cb;
 }
 
 .notification.warning {
     background-color: #fff3cd;
     color: #856404;
+    border: 1px solid #ffeeba;
 }
 
-.notification.info {
-    background-color: #cce5ff;
-    color: #004085;
-}
-
-.notification.fadeout {
-    opacity: 0;
-}
-
-/* No Results Message */
-#no-results {
-    text-align: center;
-    padding: 20px;
-    font-size: 1.2em;
-    color: #666;
-    display: none;
-}
-
-#no-results.hidden {
-    display: none;
-}
-
-/* Responsive Design */
+/* Responsive Styles */
 @media (max-width: 768px) {
+    .filters {
+        flex-direction: column;
+    }
     .filter-group {
         flex: 1 1 100%;
     }
-
-    .action-buttons button {
-        font-size: 0.9em;
-        padding: 12px 0;
+    .button-group {
+        justify-content: center;
     }
-
-    #webcam-preview,
-    #captured-photo {
-        width: 250px;
+    header h1{
+        font-size: 1.5rem;
     }
+    .header-buttons{
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
 
-    header h1 {
-        font-size: 1.5em;
+@media (max-width: 640px){
+    .modal-content{
+        width: 95%;
+        max-width: 350px;
     }
 }
