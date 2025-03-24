@@ -1,155 +1,530 @@
 <!DOCTYPE html>
- <html lang="vi">
- <head>
-     <meta charset="UTF-8">
-     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-     <title>Ứng dụng Check-in Sự kiện Thể thao</title>
-     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-     <script src="https://unpkg.com/@tailwindcss/browser@latest"></script>
-     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-     <title>Race Check-in System</title>
-     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-     <link rel="stylesheet" href="style.css">
-     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
- </head>
- <body class="bg-gray-100 min-h-screen flex flex-col">
-     <header class="fixed top-0 left-0 right-0 bg-gradient-to-r from-blue-500 to-purple-500 text-white py-4 text-center shadow-md z-50 transition-all duration-300">
-         <div class="container mx-auto px-4 flex justify-between items-center">
-             <h1 class="text-xl font-semibold tracking-tight">Race Check-in</h1>
-             <div class="flex gap-2">
-                 <button id="refresh-btn" class="action-btn bg-green-500 hover:bg-green-600 text-white font-semibold rounded-md shadow-md transition-all duration-200 transform hover:scale-105 flex items-center gap-2" aria-label="Làm mới dữ liệu">
-                     <i class="fas fa-sync"></i> <span class="hidden sm:inline">Làm mới</span>
-                     <i class="fas fa-spinner fa-spin hidden"></i>
- <body>
-     <header>
-         <div class="container header-content">
-             <div class="logo">Race Check-in</div>
-             <div class="header-actions">
-                 <button class="btn btn-success" id="refresh-btn">
-                     <i class="fas fa-sync"></i> Làm mới
-                 </button>
-                 <button id="checkin-btn" class="action-btn bg-yellow-500 hover:bg-yellow-600 text-gray-800 font-semibold rounded-md shadow-md transition-all duration-200 transform hover:scale-105 flex items-center gap-2" aria-label="Thực hiện check-in">
-                     <i class="fas fa-check-double"></i> <span class="hidden sm:inline">Check-in</span>
-                 <button class="btn btn-warning" id="qr-scan-btn">
-                     <i class="fas fa-qrcode"></i> Check-in
-                 </button>
-             </div>
-         </div>
-     </header>
-     <main class="container mx-auto px-4 py-6 flex-grow mt-20">
-         <section class="bg-white rounded-lg shadow-md p-6 mb-6 transition-all duration-300 hover:shadow-lg">
-             <div class="flex flex-col sm:flex-row gap-4 items-center">
-                 <input type="text" id="search-input" placeholder="Tìm kiếm vận động viên..." aria-label="Tìm kiếm vận động viên" class="w-full sm:w-auto px-4 py-2 rounded-md border border-gray-300 focus:border-blue-500 focus:ring-blue-500 transition-all duration-200">
-                 <div class="flex items-center gap-4">
-                     <div class="filter-group flex items-center gap-2">
-                         <label for="distance-filter" class="text-gray-700 font-medium">Khoảng cách:</label>
-                         <div class="button-group flex gap-2">
-                             <button data-filter="all" class="distance-filter-btn action-btn bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-md transition-all duration-200 px-3 py-1.5 font-medium active" aria-pressed="true">Tất cả</button>
-                             <button data-filter="5km" class="distance-filter-btn action-btn bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-md transition-all duration-200 px-3 py-1.5 font-medium" aria-pressed="false">5km</button>
-                             <button data-filter="10km" class="distance-filter-btn action-btn bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-md transition-all duration-200 px-3 py-1.5 font-medium" aria-pressed="false">10km</button>
-                             <button data-filter="21km" class="distance-filter-btn action-btn bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-md transition-all duration-200 px-3 py-1.5 font-medium" aria-pressed="false">21km</button>
-                             <button data-filter="42km" class="distance-filter-btn action-btn bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-md transition-all duration-200 px-3 py-1.5 font-medium" aria-pressed="false">42km</button>
-                         </div>
-                     </div>
-                     <div class="filter-group flex items-center gap-2">
-                         <label for="gender-filter" class="text-gray-700 font-medium">Giới tính:</label>
-                         <div class="button-group flex gap-2">
-                             <button data-gender="all" class="gender-filter-btn action-btn bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-md transition-all duration-200 px-3 py-1.5 font-medium active" aria-pressed="true">Tất cả</button>
-                             <button data-gender="nam" class="gender-filter-btn action-btn bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-md transition-all duration-200 px-3 py-1.5 font-medium" aria-pressed="false">Nam</button>
-                             <button data-gender="nữ" class="gender-filter-btn action-btn bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-md transition-all duration-200 px-3 py-1.5 font-medium" aria-pressed="false">Nữ</button>
-                         </div>
-                     </div>
-                 </div>
-             </div>
-             <div class="flex justify-between items-center mt-4">
-                 <span id="results-count" class="text-gray-600 font-medium text-sm">[0/0]</span>
-             </div>
-             <div id="no-results" class="hidden no-results text-center py-4 text-gray-500 font-medium rounded-md bg-gray-50 border border-dashed border-gray-300" role="alert">Không tìm thấy vận động viên nào.</div>
-         </section>
-         <section id="athletes-list" class="space-y-4"></section>
-     <main class="container">
-         <div class="search-container">
-             <input type="text" class="search-input" id="search-input" placeholder="Tìm kiếm vận động viên...">
-             <button class="btn btn-primary" id="search-btn">
-                 <i class="fas fa-search"></i>
-             </button>
-         </div>
-         <div class="tabs">
-             <div class="tab active" data-tab="all">Tất cả</div>
-             <div class="tab" data-tab="checked-in">Đã check-in</div>
-             <div class="tab" data-tab="not-checked-in">Chưa check-in</div>
-         </div>
-         <div class="category-filters">
-             <div class="category-filter active" data-category="all">Tất cả</div>
-             <div class="category-filter" data-category="21km">21km</div>
-             <div class="category-filter" data-category="42km">42km</div>
-             <div class="category-filter" data-category="Nam">Nam</div>
-             <div class="category-filter" data-category="Nữ">Nữ</div>
-         </div>
-         <div class="athlete-list" id="athlete-list">
-             <!-- Athletes will be populated here -->
-         </div>
-         <div class="loading" id="loading">
-             <div class="spinner"></div>
-             <p>Đang tải dữ liệu...</p>
-         </div>
-         <div class="pagination" id="pagination">
-             <!-- Pagination buttons will be added here -->
-         </div>
-     </main>
-     <footer class="bg-gradient-to-r from-blue-500 to-purple-500 text-white py-4 text-center mt-auto transition-all duration-300">
-         <div class="container mx-auto px-4">
-             © 2024 Race Check-in. All rights reserved.
-     <!-- QR Scanner Modal -->
-     <div class="modal" id="qr-modal">
-         <div class="modal-content">
-             <span class="close" id="close-qr-modal">&times;</span>
-             <h2>Quét mã QR</h2>
-             <div id="qr-reader"></div>
-         </div>
-     </footer>
-     <div id="photo-modal" class="modal fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 z-50 hidden transition-opacity duration-300" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-         <div class="modal-content relative top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg w-full max-w-md transition-all duration-300">
-             <div class="modal-header flex justify-between items-center p-4 border-b border-gray-200">
-                 <h2 id="modal-title" class="text-xl font-semibold text-gray-800">Chụp ảnh VĐV</h2>
-                 <button id="close-modal" class="close-button action-btn text-gray-500 hover:text-gray-700 transition-colors duration-200" aria-label="Đóng modal">
-                     <i class="fas fa-times text-2xl"></i>
-                 </button>
-             </div>
-             <div class="modal-body p-4">
-                 <div id="webcam-container" class="relative rounded-md overflow-hidden">
-                     <video id="webcam-preview" autoplay playsinline class="w-full max-h-[300px]"></video>
-                     <canvas id="photo-canvas" class="hidden"></canvas>
-                 </div>
-                 <img id="captured-photo" src="" alt="Ảnh đã chụp" class="hidden rounded-md w-full max-h-[300px] object-cover">
-                 <div id="photo-feedback" class="feedback mt-4 p-3 rounded-md text-center font-medium hidden" role="alert"></div>
-     </div>
-     <!-- Camera Modal -->
-     <div class="modal" id="camera-modal">
-         <div class="modal-content">
-             <span class="close" id="close-camera-modal">&times;</span>
-             <h2>Chụp ảnh check-in</h2>
-             <div id="athlete-preview">
-                 <p id="athlete-name-preview"></p>
-                 <p id="athlete-bib-preview"></p>
-             </div>
-             <div class="modal-footer flex justify-end p-4 gap-3 border-t border-gray-200">
-                 <button id="capture-btn" class="capture-btn action-btn bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-md shadow-md transition-all duration-200 px-4 py-2">Chụp ảnh</button>
-                 <button id="retake-btn" class="retake-btn action-btn bg-yellow-500 hover:bg-yellow-600 text-gray-800 font-semibold rounded-md shadow-md transition-all duration-200 px-4 py-2 hidden">Chụp lại</button>
-                 <button id="confirm-btn" class="confirm-btn action-btn bg-green-500 hover:bg-green-600 text-white font-semibold rounded-md shadow-md transition-all duration-200 px-4 py-2 hidden">Xác nhận</button>
-             <div id="camera-preview">
-                 <video id="video" width="100%" height="100%" autoplay></video>
-                 <canvas id="canvas" style="display:none;"></canvas>
-             </div>
-             <img id="captured-image">
-             <button class="btn btn-primary" id="capture-btn">
-                 <i class="fas fa-camera"></i> Chụp ảnh
-             </button>
-             <button class="btn btn-success" id="confirm-checkin-btn" style="display:none;">
-                 <i class="fas fa-check"></i> Xác nhận check-in
-             </button>
-         </div>
-     </div>
-     <script src="script.js"></script>
- </body>
- </html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Race Check-in Portal</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <img src="/api/placeholder/150/50" alt="Race Logo">
+            </div>
+            <h1>Athlete Check-in Portal</h1>
+        </header>
+
+        <main>
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="qr-code">
+                    <i class="fas fa-qrcode"></i> QR Code Scanner
+                </button>
+                <button class="tab-btn" data-tab="manual">
+                    <i class="fas fa-keyboard"></i> Manual Search
+                </button>
+                <button class="tab-btn" data-tab="status">
+                    <i class="fas fa-chart-bar"></i> Race Status
+                </button>
+            </div>
+
+            <div class="tab-content active" id="qr-code">
+                <div class="card">
+                    <h2>QR Code Check-in</h2>
+                    <p>Scan athlete's QR code to quickly check them in for the race</p>
+                    <div id="qr-reader"></div>
+                    <button id="start-scan" class="primary-btn">
+                        <i class="fas fa-camera"></i> Start Scanner
+                    </button>
+                </div>
+            </div>
+
+            <div class="tab-content" id="manual">
+                <div class="card">
+                    <h2>Manual Athlete Search</h2>
+                    <div class="search-box">
+                        <input type="text" id="search-input" placeholder="Enter bib number, phone number or athlete name">
+                        <button id="search-btn" class="primary-btn">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                    </div>
+                    <div id="search-results" class="result-box">
+                        <!-- Search results will be populated here dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="status">
+                <div class="card">
+                    <h2>Race Check-in Dashboard</h2>
+                    <div class="stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Total Athletes</span>
+                            <span id="total-athletes" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Checked-in</span>
+                            <span id="checked-in" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Pending</span>
+                            <span id="pending" class="stat-value">0</span>
+                        </div>
+                    </div>
+                    <div class="recent-activity">
+                        <h3>Recent Check-in Activity</h3>
+                        <ul id="activity-log">
+                            <!-- Activity logs will be populated here dynamically -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Athlete Details Modal -->
+            <div id="athlete-modal" class="modal">
+                <div class="modal-content">
+                    <span class="close-modal">&times;</span>
+                    <div id="athlete-info">
+                        <!-- Athlete info will be populated here dynamically -->
+                    </div>
+                    <div id="capture-photo" class="capture-box hidden">
+                        <h3>Capture Athlete BIB Photo</h3>
+                        <div class="camera-container">
+                            <video id="camera-view" autoplay playsinline></video>
+                            <canvas id="camera-canvas" class="hidden"></canvas>
+                            <img id="captured-image" class="hidden">
+                        </div>
+                        <div class="camera-controls">
+                            <button id="start-camera" class="primary-btn">
+                                <i class="fas fa-camera"></i> Start Camera
+                            </button>
+                            <button id="capture-button" class="primary-btn" disabled>
+                                <i class="fas fa-image"></i> Capture Photo
+                            </button>
+                            <button id="retry-capture" class="secondary-btn hidden">
+                                <i class="fas fa-redo"></i> Retry
+                            </button>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        <button id="check-in-btn" class="primary-btn">
+                            <i class="fas fa-check-circle"></i> Check In Athlete
+                        </button>
+                        <button id="take-photo-btn" class="secondary-btn">
+                            <i class="fas fa-camera"></i> Take BIB Photo
+                        </button>
+                        <button id="cancel-btn" class="danger-btn">
+                            <i class="fas fa-times-circle"></i> Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Confirmation Modal -->
+            <div id="confirm-modal" class="modal">
+                <div class="modal-content confirmation">
+                    <span class="close-modal">&times;</span>
+                    <div class="confirm-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <h2>Check-in Successful!</h2>
+                    <p>Athlete has been successfully checked in for the race.</p>
+                    <div class="confirm-details">
+                        <p id="confirm-name"></p>
+                        <p id="confirm-bib"></p>
+                        <p id="confirm-category"></p>
+                        <p id="confirm-time"></p>
+                    </div>
+                    <button id="confirm-done" class="primary-btn">
+                        <i class="fas fa-check"></i> Done
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>&copy; 2025 Race Management System | <a href="#" id="help-link">Help</a> | <a href="#" id="support-link">Support</a></p>
+        </footer>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="help-modal" class="modal">
+        <div class="modal-content help-content">
+            <span class="close-modal">&times;</span>
+            <h2>Help & Instructions</h2>
+            <!-- Help content removed -->
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const startScanBtn = document.getElementById('start-scan');
+        const searchBtn = document.getElementById('search-btn');
+        const searchInput = document.getElementById('search-input');
+        const searchResults = document.getElementById('search-results');
+        const athleteModal = document.getElementById('athlete-modal');
+        const confirmModal = document.getElementById('confirm-modal');
+        const helpModal = document.getElementById('help-modal');
+        const closeModals = document.querySelectorAll('.close-modal');
+        const checkInBtn = document.getElementById('check-in-btn');
+        const takePhotoBtn = document.getElementById('take-photo-btn');
+        const cancelBtn = document.getElementById('cancel-btn');
+        const confirmDoneBtn = document.getElementById('confirm-done');
+        const helpLink = document.getElementById('help-link');
+        const capturePhoto = document.getElementById('capture-photo');
+        const startCameraBtn = document.getElementById('start-camera');
+        const captureButton = document.getElementById('capture-button');
+        const retryCaptureBtn = document.getElementById('retry-capture');
+        const cameraView = document.getElementById('camera-view');
+        const cameraCanvas = document.getElementById('camera-canvas');
+        const capturedImage = document.getElementById('captured-image');
+        
+        // Mock athlete data (would come from server API in production)
+        const athletes = [
+            { id: 1, name: 'Nguyễn Văn A', bib: '1001', category: 'Half Marathon - Male', phone: '0901234567', email: 'nguyenvana@gmail.com', status: 'registered' },
+            { id: 2, name: 'Trần Thị B', bib: '1002', category: '10K - Female', phone: '0912345678', email: 'tranthib@gmail.com', status: 'registered' },
+            { id: 3, name: 'Lê Văn C', bib: '1003', category: 'Full Marathon - Male', phone: '0923456789', email: 'levanc@gmail.com', status: 'registered' },
+            { id: 4, name: 'Phạm Thị D', bib: '1004', category: '5K - Female', phone: '0934567890', email: 'phamthid@gmail.com', status: 'checked-in' },
+            { id: 5, name: 'Hoàng Văn E', bib: '1005', category: '10K - Male', phone: '0945678901', email: 'hoangvane@gmail.com', status: 'checked-in' }
+        ];
+        
+        // Tab functionality
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabId = btn.getAttribute('data-tab');
+                
+                // Remove active class from all tabs
+                tabBtns.forEach(btn => btn.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+                
+                // Add active class to clicked tab
+                btn.classList.add('active');
+                document.getElementById(tabId).classList.add('active');
+                
+                // Update dashboard stats if on status tab
+                if (tabId === 'status') {
+                    updateDashboardStats();
+                }
+            });
+        });
+        
+        // QR Code scanner
+        let html5QrCode;
+        
+        startScanBtn.addEventListener('click', () => {
+            const qrReader = document.getElementById('qr-reader');
+            
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().then(() => {
+                    qrReader.innerHTML = '';
+                    startScanBtn.innerHTML = '<i class="fas fa-camera"></i> Start Scanner';
+                });
+                return;
+            }
+            
+            html5QrCode = new Html5Qrcode("qr-reader");
+            
+            html5QrCode.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: 250 },
+                (decodedText) => {
+                    // Handle QR code success - typically this would be an athlete ID
+                    // For demo purposes, just showing the first athlete
+                    displayAthleteModal(athletes[0]);
+                    html5QrCode.stop();
+                    startScanBtn.innerHTML = '<i class="fas fa-camera"></i> Start Scanner';
+                },
+                (errorMessage) => {
+                    // QR scan error (ignored for demo)
+                }
+            ).catch((err) => {
+                console.error(`Unable to start scanning: ${err}`);
+            });
+            
+            startScanBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Scanner';
+        });
+        
+        // Manual search
+        searchBtn.addEventListener('click', performSearch);
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+        
+        function performSearch() {
+            const query = searchInput.value.toLowerCase().trim();
+            
+            if (!query) {
+                searchResults.innerHTML = '<p class="no-results">Please enter a search term.</p>';
+                return;
+            }
+            
+            const results = athletes.filter(athlete => 
+                athlete.name.toLowerCase().includes(query) || 
+                athlete.bib.includes(query) || 
+                athlete.phone.includes(query)
+            );
+            
+            if (results.length === 0) {
+                searchResults.innerHTML = '<p class="no-results">No athletes found matching your search.</p>';
+                return;
+            }
+            
+            let html = '';
+            results.forEach(athlete => {
+                const statusClass = athlete.status === 'checked-in' ? 'checked-in' : 'registered';
+                html += `
+                    <div class="result-item" data-id="${athlete.id}">
+                        <div class="result-main">
+                            <span class="result-bib">${athlete.bib}</span>
+                            <span class="result-name">${athlete.name}</span>
+                        </div>
+                        <div class="result-meta">
+                            <span class="result-category">${athlete.category}</span>
+                            <span class="result-status ${statusClass}">${athlete.status === 'checked-in' ? 'Checked-in' : 'Registered'}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            searchResults.innerHTML = html;
+            
+            // Add click event to search results
+            document.querySelectorAll('.result-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const athleteId = parseInt(item.getAttribute('data-id'));
+                    const athlete = athletes.find(a => a.id === athleteId);
+                    displayAthleteModal(athlete);
+                });
+            });
+        }
+        
+        // Modal handling
+        function displayAthleteModal(athlete) {
+            const athleteInfo = document.getElementById('athlete-info');
+            const statusClass = athlete.status === 'checked-in' ? 'checked-in' : 'registered';
+            
+            athleteInfo.innerHTML = `
+                <div class="athlete-header">
+                    <span class="athlete-bib">${athlete.bib}</span>
+                    <span class="athlete-status ${statusClass}">${athlete.status === 'checked-in' ? 'Checked-in' : 'Registered'}</span>
+                </div>
+                <h2 class="athlete-name">${athlete.name}</h2>
+                <div class="athlete-details">
+                    <p><strong>Category:</strong> ${athlete.category}</p>
+                    <p><strong>Phone:</strong> ${athlete.phone}</p>
+                    <p><strong>Email:</strong> ${athlete.email}</p>
+                </div>
+            `;
+            
+            // Update buttons based on athlete status
+            if (athlete.status === 'checked-in') {
+                checkInBtn.disabled = true;
+                checkInBtn.innerHTML = '<i class="fas fa-check-circle"></i> Already Checked In';
+            } else {
+                checkInBtn.disabled = false;
+                checkInBtn.innerHTML = '<i class="fas fa-check-circle"></i> Check In Athlete';
+            }
+            
+            athleteModal.style.display = 'block';
+            
+            // Store athlete in modal for access by other functions
+            athleteModal.setAttribute('data-athlete-id', athlete.id);
+            
+            // Hide capture photo section initially
+            capturePhoto.classList.add('hidden');
+        }
+        
+        // Close all modals when clicking the X
+        closeModals.forEach(closeBtn => {
+            closeBtn.addEventListener('click', () => {
+                athleteModal.style.display = 'none';
+                confirmModal.style.display = 'none';
+                helpModal.style.display = 'none';
+                
+                // Stop camera if it's running
+                stopCamera();
+            });
+        });
+        
+        // Check-in button
+        checkInBtn.addEventListener('click', () => {
+            const athleteId = parseInt(athleteModal.getAttribute('data-athlete-id'));
+            const athlete = athletes.find(a => a.id === athleteId);
+            
+            // Update athlete status
+            athlete.status = 'checked-in';
+            
+            // Show confirmation modal
+            document.getElementById('confirm-name').textContent = `Name: ${athlete.name}`;
+            document.getElementById('confirm-bib').textContent = `BIB #: ${athlete.bib}`;
+            document.getElementById('confirm-category').textContent = `Category: ${athlete.category}`;
+            
+            const now = new Date();
+            const timeFormatted = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('confirm-time').textContent = `Time: ${timeFormatted}`;
+            
+            athleteModal.style.display = 'none';
+            confirmModal.style.display = 'block';
+            
+            // Add to activity log
+            addActivityLog(athlete);
+            
+            // Update dashboard stats if on status tab
+            if (document.querySelector('.tab-btn[data-tab="status"]').classList.contains('active')) {
+                updateDashboardStats();
+            }
+        });
+        
+        // Confirmation done button
+        confirmDoneBtn.addEventListener('click', () => {
+            confirmModal.style.display = 'none';
+        });
+        
+        // Camera functionality
+        takePhotoBtn.addEventListener('click', () => {
+            capturePhoto.classList.remove('hidden');
+        });
+        
+        // Cancel button
+        cancelBtn.addEventListener('click', () => {
+            athleteModal.style.display = 'none';
+            stopCamera();
+        });
+        
+        // Start camera
+        startCameraBtn.addEventListener('click', async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' }, 
+                    audio: false 
+                });
+                
+                cameraView.srcObject = stream;
+                captureButton.disabled = false;
+                startCameraBtn.disabled = true;
+                
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+                alert('Unable to access camera. Please make sure camera permissions are granted.');
+            }
+        });
+        
+        // Capture photo
+        captureButton.addEventListener('click', () => {
+            // Set canvas dimensions to match video
+            cameraCanvas.width = cameraView.videoWidth;
+            cameraCanvas.height = cameraView.videoHeight;
+            
+            // Draw the video frame to the canvas
+            const context = cameraCanvas.getContext('2d');
+            context.drawImage(cameraView, 0, 0, cameraCanvas.width, cameraCanvas.height);
+            
+            // Convert canvas to image
+            capturedImage.src = cameraCanvas.toDataURL('image/png');
+            
+            // Show the image, hide the video
+            cameraView.classList.add('hidden');
+            capturedImage.classList.remove('hidden');
+            retryCaptureBtn.classList.remove('hidden');
+            captureButton.classList.add('hidden');
+            
+            // Disable start camera button
+            startCameraBtn.disabled = true;
+        });
+        
+        // Retry capture
+        retryCaptureBtn.addEventListener('click', () => {
+            // Show video, hide image
+            cameraView.classList.remove('hidden');
+            capturedImage.classList.add('hidden');
+            retryCaptureBtn.classList.add('hidden');
+            captureButton.classList.remove('hidden');
+        });
+        
+        // Stop camera function
+        function stopCamera() {
+            if (cameraView.srcObject) {
+                const tracks = cameraView.srcObject.getTracks();
+                tracks.forEach(track => track.stop());
+                cameraView.srcObject = null;
+            }
+            
+            // Reset camera UI
+            captureButton.disabled = true;
+            startCameraBtn.disabled = false;
+            cameraView.classList.remove('hidden');
+            capturedImage.classList.add('hidden');
+            retryCaptureBtn.classList.add('hidden');
+            captureButton.classList.remove('hidden');
+        }
+        
+        // Help link
+        helpLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            helpModal.style.display = 'block';
+        });
+        
+        // Add activity to the log
+        function addActivityLog(athlete) {
+            const activityLog = document.getElementById('activity-log');
+            const now = new Date();
+            const timeFormatted = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+            
+            const logItem = document.createElement('li');
+            logItem.innerHTML = `
+                <span class="log-time">${timeFormatted}</span>
+                <span class="log-bib">#${athlete.bib}</span>
+                <span class="log-name">${athlete.name}</span>
+                <span class="log-action">checked in</span>
+            `;
+            
+            // Add to beginning of list
+            if (activityLog.firstChild) {
+                activityLog.insertBefore(logItem, activityLog.firstChild);
+            } else {
+                activityLog.appendChild(logItem);
+            }
+            
+            // Keep list to 10 items max
+            if (activityLog.children.length > 10) {
+                activityLog.removeChild(activityLog.lastChild);
+            }
+        }
+        
+        // Update dashboard stats
+        function updateDashboardStats() {
+            const totalAthletes = athletes.length;
+            const checkedIn = athletes.filter(a => a.status === 'checked-in').length;
+            const pending = totalAthletes - checkedIn;
+            
+            document.getElementById('total-athletes').textContent = totalAthletes;
+            document.getElementById('checked-in').textContent = checkedIn;
+            document.getElementById('pending').textContent = pending;
+        }
+        
+        // Initialize dashboard on page load
+        updateDashboardStats();
+        
+        // Close modals when clicking outside modal content
+        window.addEventListener('click', (e) => {
+            if (e.target === athleteModal) {
+                athleteModal.style.display = 'none';
+                stopCamera();
+            }
+            if (e.target === confirmModal) {
+                confirmModal.style.display = 'none';
+            }
+            if (e.target === helpModal) {
+                helpModal.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
