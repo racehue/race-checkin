@@ -18,6 +18,7 @@ let currentPage = 1;
 let itemsPerPage = 10;
 let selectedAthlete = null;
 let qrScanner = null;
+let lastDataSource = 'none'; // Track where data was last loaded from
 
 // DOM Elements
 const athleteListEl = document.getElementById('athlete-list');
@@ -40,11 +41,19 @@ const athleteBibPreviewEl = document.getElementById('athlete-bib-preview');
 const paginationEl = document.getElementById('pagination');
 const tabsEl = document.querySelectorAll('.tab');
 const categoryFiltersEl = document.querySelectorAll('.category-filter');
+const syncStatusEl = document.getElementById('sync-status') || document.createElement('div'); // Thêm trạng thái đồng bộ
 
 // Initialize the application
 window.addEventListener('DOMContentLoaded', () => {
     loadAthletes();
     setupEventListeners();
+    
+    // Tạo và thêm phần tử hiển thị trạng thái đồng bộ nếu chưa có trong HTML
+    if (!document.getElementById('sync-status')) {
+        syncStatusEl.id = 'sync-status';
+        syncStatusEl.className = 'sync-status';
+        document.querySelector('.search-container').appendChild(syncStatusEl);
+    }
 });
 
 // Load athletes data
@@ -52,15 +61,25 @@ async function loadAthletes() {
     showLoading();
     try {
         // Try loading from GitHub first
-        const githubResponse = await fetch(GITHUB_DATA_URL);
+        const githubResponse = await fetch(GITHUB_DATA_URL + '?t=' + new Date().getTime(), {
+            cache: 'no-store' // Tránh cache
+        });
+        
         if (githubResponse.ok) {
             athletes = await githubResponse.json();
+            lastDataSource = 'github';
+            updateSyncStatus('Đã đồng bộ với GitHub');
         } else {
             // Fallback to Google Sheets API
             const sheetResponse = await fetch(API_URL);
             if (sheetResponse.ok) {
                 const data = await sheetResponse.json();
                 athletes = parseSheetData(data.values);
+                lastDataSource = 'sheets';
+                updateSyncStatus('Đã tải từ Google Sheets, chưa đồng bộ với GitHub');
+                
+                // Automatically sync to GitHub if loaded from Sheets
+                await syncToGitHub(athletes);
             } else {
                 throw new Error('Failed to load data from both sources');
             }
@@ -68,6 +87,7 @@ async function loadAthletes() {
         applyFilters();
     } catch (error) {
         console.error('Error loading data:', error);
+        updateSyncStatus('Lỗi tải dữ liệu');
         alert('Không thể tải dữ liệu. Vui lòng thử lại sau.');
     } finally {
         hideLoading();
@@ -98,9 +118,35 @@ function setupEventListeners() {
         }
     });
 
-    // Refresh button
-    refreshBtnEl.addEventListener('click', () => {
-        loadAthletes();
+    // Refresh button - Cập nhật để làm mới cả từ Google Sheets và đồng bộ lên GitHub
+    refreshBtnEl.addEventListener('click', async () => {
+        showLoading();
+        try {
+            // Luôn tải từ Google Sheets khi làm mới
+            const sheetResponse = await fetch(API_URL + '?t=' + new Date().getTime(), {
+                cache: 'no-store' // Tránh cache
+            });
+            
+            if (sheetResponse.ok) {
+                const data = await sheetResponse.json();
+                athletes = parseSheetData(data.values);
+                lastDataSource = 'sheets';
+                updateSyncStatus('Đã tải từ Google Sheets, đang đồng bộ với GitHub...');
+                
+                // Luôn đồng bộ với GitHub sau khi làm mới từ Sheets
+                await syncToGitHub(athletes);
+                
+                applyFilters();
+            } else {
+                throw new Error('Failed to refresh data from Google Sheets');
+            }
+        } catch (error) {
+            console.error('Error refreshing data:', error);
+            updateSyncStatus('Lỗi làm mới dữ liệu');
+            alert('Không thể làm mới dữ liệu. Vui lòng thử lại sau.');
+        } finally {
+            hideLoading();
+        }
     });
 
     // QR Scanner
@@ -391,6 +437,8 @@ async function confirmCheckin() {
         return;
     }
     showLoading();
+    updateSyncStatus('Đang thực hiện check-in...');
+    
     try {
         // Convert image to blob for upload
         const imageBlob = await new Promise(resolve => {
@@ -403,19 +451,34 @@ async function confirmCheckin() {
         formData.append('id', selectedAthlete.id || '');
         formData.append('bib', selectedAthlete.bib || '');
         formData.append('image', imageBlob, `${selectedAthlete.bib || 'unknown'}.jpg`);
+        formData.append('syncToGitHub', 'yes'); // Yêu cầu đồng bộ với GitHub
 
         // Send to Google Apps Script Web App
         const response = await fetch(WEBAPP_URL, {
             method: 'POST',
             body: formData
         });
+        
         if (response.ok) {
             const result = await response.json();
             if (result.success) {
+                // Cập nhật trạng thái đồng bộ dựa trên phản hồi từ server
+                if (result.syncStatus === 'success') {
+                    updateSyncStatus('Check-in thành công và đã đồng bộ với GitHub!');
+                } else if (result.syncStatus === 'failed') {
+                    updateSyncStatus('Check-in thành công nhưng đồng bộ GitHub thất bại!');
+                    // Thử đồng bộ từ phía client
+                    await loadAthletes();
+                } else {
+                    updateSyncStatus('Check-in thành công!');
+                    // Tải lại dữ liệu để đảm bảo đồng bộ
+                    await loadAthletes();
+                }
+                
                 alert('Check-in thành công!');
                 closeCameraModal();
-                loadAthletes(); // Reload data after check-in
             } else {
+                updateSyncStatus('Check-in thất bại!');
                 alert('Check-in thất bại. Vui lòng thử lại.');
             }
         } else {
@@ -423,10 +486,66 @@ async function confirmCheckin() {
         }
     } catch (error) {
         console.error('Error confirming check-in:', error);
+        updateSyncStatus('Lỗi khi xác nhận check-in');
         alert('Đã xảy ra lỗi khi xác nhận check-in.');
     } finally {
         hideLoading();
     }
+}
+
+// Thêm hàm đồng bộ lên GitHub
+async function syncToGitHub(data) {
+    try {
+        updateSyncStatus('Đang đồng bộ với GitHub...');
+        
+        // Sử dụng Web App để đồng bộ với GitHub
+        const response = await fetch(WEBAPP_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'syncToGitHub',
+                data: data
+            })
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            if (result.success) {
+                updateSyncStatus('Đã đồng bộ với GitHub thành công!');
+                return true;
+            } else {
+                updateSyncStatus('Đồng bộ GitHub thất bại: ' + (result.message || 'Không rõ lỗi'));
+                console.error('GitHub sync failed:', result.message);
+                return false;
+            }
+        } else {
+            throw new Error('Server error during GitHub sync');
+        }
+    } catch (error) {
+        updateSyncStatus('Lỗi đồng bộ với GitHub');
+        console.error('Error syncing to GitHub:', error);
+        return false;
+    }
+}
+
+// Cập nhật trạng thái đồng bộ
+function updateSyncStatus(message) {
+    if (syncStatusEl) {
+        syncStatusEl.textContent = message;
+        // Thêm mã CSS cho syncStatusEl nếu cần
+        syncStatusEl.style.display = 'block';
+        syncStatusEl.style.padding = '5px 10px';
+        syncStatusEl.style.fontSize = '14px';
+        syncStatusEl.style.marginTop = '5px';
+        
+        // Tự động ẩn sau 5 giây
+        setTimeout(() => {
+            syncStatusEl.style.opacity = '0.7';
+        }, 5000);
+    }
+    console.log('Sync status:', message);
 }
 
 // Utility functions
@@ -437,3 +556,22 @@ function showLoading() {
 function hideLoading() {
     loadingEl.style.display = 'none';
 }
+
+// Thêm một số CSS cần thiết nếu chưa có trong HTML
+(function addRequiredStyles() {
+    if (!document.getElementById('sync-status-style')) {
+        const style = document.createElement('style');
+        style.id = 'sync-status-style';
+        style.textContent = `
+            .sync-status {
+                background-color: #f8f9fa;
+                border: 1px solid #dee2e6;
+                border-radius: 4px;
+                color: #495057;
+                margin-bottom: 10px;
+                transition: opacity 0.5s ease;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+})();
