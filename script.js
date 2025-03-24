@@ -1,348 +1,439 @@
-// Google Sheets API setup
+// Configuration
 const SHEET_ID = '1kdt68gFOrTyirvo69oRDpAJDM7y_iGxvXM3HLDb57kw';
 const API_KEY = 'AIzaSyAMjzUR6DiIiSBkxaqtohn4YJqlm9njUu0';
 const SHEET_NAME = 'athletes';
 const API_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}`;
-// GitHub repository details
 const GITHUB_OWNER = 'racehue';
 const GITHUB_REPO = 'race-check-in';
 const GITHUB_PATH = 'data/athletes.json';
 const GITHUB_DATA_URL = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/main/${GITHUB_PATH}`;
-// Web App URL for Google Sheets (Google Apps Script)
 const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwd2dmoqXdXcnZCCNjJLEN6YskOPWDdQYfeRfZDAb1HI5T0liAQ-qnpXkU6iP7HNnA0Aw/exec';
-// Global variables
+
+// Variables
 let athletes = [];
 let filteredAthletes = [];
-let selectedDistance = 'all';
-let selectedGender = 'all';
-let selectedAthleteId = null;
-let capturedImageURL = '';
-let videoStream = null;
-let isOnline = navigator.onLine;
-let db;
-const DB_NAME = 'raceCheckinDB';
-const DB_VERSION = 1;
+let currentTab = 'all';
+let currentCategory = 'all';
+let currentPage = 1;
+let itemsPerPage = 10;
+let selectedAthlete = null;
+let qrScanner = null;
 
-// DOM elements
-const searchInput = document.getElementById('search-input');
-const refreshBtn = document.getElementById('refresh-btn');
-const checkinBtn = document.getElementById('checkin-btn');
-const distanceFilterBtns = document.querySelectorAll('.distance-filter-btn');
-const genderFilterBtns = document.querySelectorAll('.gender-filter-btn');
-const athletesList = document.getElementById('athletes-list');
-const noResultsMessage = document.getElementById('no-results');
-const resultsCount = document.getElementById('results-count');
-const photoModal = document.getElementById('photo-modal');
-const closeModalBtn = document.getElementById('close-modal');
-const webcamPreview = document.getElementById('webcam-preview');
-const photoCanvas = document.getElementById('photo-canvas');
-const capturedPhoto = document.getElementById('captured-photo');
-const captureBtn = document.getElementById('capture-btn');
-const retakeBtn = document.getElementById('retake-btn');
-const confirmBtn = document.getElementById('confirm-btn');
-const photoFeedback = document.getElementById('photo-feedback');
+// DOM Elements
+const athleteListEl = document.getElementById('athlete-list');
+const loadingEl = document.getElementById('loading');
+const searchInputEl = document.getElementById('search-input');
+const searchBtnEl = document.getElementById('search-btn');
+const refreshBtnEl = document.getElementById('refresh-btn');
+const qrScanBtnEl = document.getElementById('qr-scan-btn');
+const qrModalEl = document.getElementById('qr-modal');
+const closeQrModalEl = document.getElementById('close-qr-modal');
+const cameraModalEl = document.getElementById('camera-modal');
+const closeCameraModalEl = document.getElementById('close-camera-modal');
+const captureBtnEl = document.getElementById('capture-btn');
+const confirmCheckinBtnEl = document.getElementById('confirm-checkin-btn');
+const videoEl = document.getElementById('video');
+const canvasEl = document.getElementById('canvas');
+const capturedImageEl = document.getElementById('captured-image');
+const athleteNamePreviewEl = document.getElementById('athlete-name-preview');
+const athleteBibPreviewEl = document.getElementById('athlete-bib-preview');
+const paginationEl = document.getElementById('pagination');
+const tabsEl = document.querySelectorAll('.tab');
+const categoryFiltersEl = document.querySelectorAll('.category-filter');
 
-// Helper Functions
-function showNotification(message, type = 'success') {
-    const notification = document.createElement('div');
-    notification.classList.add('notification', type);
-    const iconClass = {
-        success: 'fas fa-check-circle',
-        error: 'fas fa-exclamation-circle',
-        warning: 'fas fa-exclamation-triangle',
-        info: 'fas fa-info-circle'
-    }[type] || 'fas fa-info-circle';
-    notification.innerHTML = `<i class="${iconClass}"></i> ${message}`;
-    document.body.appendChild(notification);
-    setTimeout(() => notification.remove(), 3000);
+// Initialize the application
+window.addEventListener('DOMContentLoaded', () => {
+    loadAthletes();
+    setupEventListeners();
+});
+
+// Load athletes data
+async function loadAthletes() {
+    showLoading();
+    try {
+        // Try loading from GitHub first
+        const githubResponse = await fetch(GITHUB_DATA_URL);
+        if (githubResponse.ok) {
+            athletes = await githubResponse.json();
+        } else {
+            // Fallback to Google Sheets API
+            const sheetResponse = await fetch(API_URL);
+            if (sheetResponse.ok) {
+                const data = await sheetResponse.json();
+                athletes = parseSheetData(data.values);
+            } else {
+                throw new Error('Failed to load data from both sources');
+            }
+        }
+        applyFilters();
+    } catch (error) {
+        console.error('Error loading data:', error);
+        alert('Không thể tải dữ liệu. Vui lòng thử lại sau.');
+    } finally {
+        hideLoading();
+    }
 }
 
-function debounce(func, delay = 300) {
-    let timeoutId;
-    return (...args) => {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => func(...args), delay);
-    };
-}
-
-function renderAthletes() {
-    athletesList.innerHTML = '';
-    const searchTerm = searchInput.value.toLowerCase();
-    filteredAthletes = athletes.filter(athlete => {
-        const searchMatch = athlete.bib.toLowerCase().includes(searchTerm) || athlete.name.toLowerCase().includes(searchTerm);
-        const distanceMatch = selectedDistance === 'all' || athlete.distance === selectedDistance;
-        const genderMatch = selectedGender === 'all' || athlete.gender === selectedGender;
-        return searchMatch && distanceMatch && genderMatch;
+// Parse sheet data into a structured format
+function parseSheetData(values) {
+    const headers = values[0];
+    return values.slice(1).map(row => {
+        const athlete = {};
+        headers.forEach((header, index) => {
+            athlete[header] = row[index] || '';
+        });
+        return athlete;
     });
-    filteredAthletes.forEach(athlete => {
-        const athleteCard = document.createElement('div');
-        athleteCard.classList.add('athlete-card', 'bg-white', 'rounded-md', 'shadow-sm', 'p-4', 'flex', 'items-center', 'justify-between', 'transition-all', 'duration-200', 'hover:shadow-md');
-        if (selectedAthleteId === athlete.id) athleteCard.classList.add('selected');
-        athleteCard.innerHTML = `
-            <div>
-                <div class="font-semibold text-lg text-blue-600">${athlete.name}</div>
-                <div class="text-gray-600 text-sm">BIB: <span class="font-mono">${athlete.bib}</span></div>
-                <div class="text-gray-500 text-xs">Distance: <span class="font-medium">${athlete.distance}</span></div>
-                <div class="text-gray-500 text-xs">Gender: <span class="font-medium">${athlete.gender}</span></div>
-                <div class="text-gray-500 text-xs">Check-in: <span class="${athlete.checkedIn ? 'text-green-600' : 'text-red-600'} font-medium">${athlete.checkedIn ? 'Yes' : 'No'}</span></div>
-            </div>
-            <div class="flex gap-2">
-                <img src="${athlete.photo || 'placeholder.png'}" alt="Ảnh của ${athlete.name}" class="w-16 h-16 rounded-md object-cover">
-                <button class="checkin-button action-btn bg-yellow-500 hover:bg-yellow-600 text-gray-800 font-semibold rounded-md shadow-md transition-all duration-200 px-3 py-1.5 flex items-center gap-1.5" data-athlete-id="${athlete.id}" aria-label="Check-in cho ${athlete.name}" ${athlete.checkedIn ? 'disabled' : ''}>
-                    <i class="fas fa-check-circle"></i> <span class="hidden sm:inline">Check-in</span>
+}
+
+// Setup event listeners
+function setupEventListeners() {
+    // Search functionality
+    searchBtnEl.addEventListener('click', () => {
+        applyFilters();
+    });
+    searchInputEl.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') {
+            applyFilters();
+        }
+    });
+
+    // Refresh button
+    refreshBtnEl.addEventListener('click', () => {
+        loadAthletes();
+    });
+
+    // QR Scanner
+    qrScanBtnEl.addEventListener('click', () => {
+        openQrScanner();
+    });
+    closeQrModalEl.addEventListener('click', () => {
+        closeQrScanner();
+    });
+
+    // Camera modal
+    closeCameraModalEl.addEventListener('click', () => {
+        closeCameraModal();
+    });
+    captureBtnEl.addEventListener('click', captureImage);
+    confirmCheckinBtnEl.addEventListener('click', confirmCheckin);
+
+    // Tab switching
+    tabsEl.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabsEl.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            currentTab = tab.dataset.tab;
+            currentPage = 1;
+            applyFilters();
+        });
+    });
+
+    // Category filters
+    categoryFiltersEl.forEach(filter => {
+        filter.addEventListener('click', () => {
+            categoryFiltersEl.forEach(f => f.classList.remove('active'));
+            filter.classList.add('active');
+            currentCategory = filter.dataset.category;
+            currentPage = 1;
+            applyFilters();
+        });
+    });
+}
+
+// Apply filters and search to athletes list
+function applyFilters() {
+    const searchTerm = searchInputEl.value.toLowerCase();
+    filteredAthletes = athletes.filter(athlete => {
+        // Search term filter
+        const nameMatch = athlete.name?.toLowerCase().includes(searchTerm);
+        const bibMatch = athlete.bib?.toLowerCase().includes(searchTerm);
+        const phoneMatch = athlete.phone?.toLowerCase().includes(searchTerm);
+        const matchesSearch = !searchTerm || nameMatch || bibMatch || phoneMatch;
+
+        // Tab filter
+        let tabMatch = true;
+        if (currentTab === 'checked-in') {
+            tabMatch = athlete.checkin === 'Yes';
+        } else if (currentTab === 'not-checked-in') {
+            tabMatch = athlete.checkin !== 'Yes';
+        }
+
+        // Category filter
+        let categoryMatch = true;
+        if (currentCategory !== 'all') {
+            categoryMatch = athlete.category === currentCategory || 
+                            athlete.distance === currentCategory || 
+                            athlete.gender === currentCategory;
+        }
+        return matchesSearch && tabMatch && categoryMatch;
+    });
+    renderPagination();
+    renderAthleteList();
+}
+
+// Render athlete list
+function renderAthleteList() {
+    athleteListEl.innerHTML = '';
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedAthletes = filteredAthletes.slice(startIndex, endIndex);
+    if (paginatedAthletes.length === 0) {
+        athleteListEl.innerHTML = '<p class="text-center">Không tìm thấy vận động viên nào.</p>';
+        return;
+    }
+    paginatedAthletes.forEach(athlete => {
+        const card = document.createElement('div');
+        card.className = 'athlete-card';
+        const isCheckedIn = athlete.checkin === 'Yes';
+        card.innerHTML = `
+            <div class="athlete-info">
+                <div class="athlete-status ${isCheckedIn ? 'status-yes' : 'status-no'}">
+                    ${isCheckedIn ? 'Đã check-in' : 'Chưa check-in'}
+                </div>
+                <div class="athlete-name">${athlete.name || 'Không có tên'}</div>
+                <div class="athlete-details">BIB: ${athlete.bib || 'N/A'}</div>
+                <div class="athlete-details">Cự ly: ${athlete.distance || 'N/A'}</div>
+                <div class="athlete-details">Giới tính: ${athlete.gender || 'N/A'}</div>
+                <button class="btn ${isCheckedIn ? 'btn-success' : 'btn-warning'} checkin-btn" data-id="${athlete.id || athlete.bib}">
+                    <i class="fas ${isCheckedIn ? 'fa-check-circle' : 'fa-sign-in-alt'}"></i>
+                    ${isCheckedIn ? 'Đã check-in' : 'Check-in'}
                 </button>
             </div>
         `;
-        const checkinButton = athleteCard.querySelector('.checkin-button');
-        if (!athlete.checkedIn) {
-            checkinButton.addEventListener('click', () => {
-                selectedAthleteId = athlete.id;
-                renderAthletes();
-                openPhotoModal();
-            });
-        }
-        athletesList.appendChild(athleteCard);
+        const checkinBtn = card.querySelector('.checkin-btn');
+        checkinBtn.addEventListener('click', () => {
+            if (!isCheckedIn) {
+                selectedAthlete = athlete;
+                openCameraModal(athlete);
+            }
+        });
+        athleteListEl.appendChild(card);
     });
-    resultsCount.textContent = `[${filteredAthletes.length}/${athletes.length}]`;
-    noResultsMessage.classList.toggle('hidden', filteredAthletes.length > 0);
 }
 
-function openPhotoModal() {
-    photoModal.classList.remove('hidden');
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
-            .then(stream => {
-                videoStream = stream;
-                webcamPreview.srcObject = stream;
-                webcamPreview.classList.remove('hidden');
-                capturedPhoto.classList.add('hidden');
-                captureBtn.classList.remove('hidden');
-                retakeBtn.classList.add('hidden');
-                confirmBtn.classList.add('hidden');
-                photoFeedback.classList.add('hidden');
-            })
-            .catch(error => {
-                console.error('Error accessing webcam:', error);
-                showNotification('Lỗi truy cập webcam. Vui lòng kiểm tra quyền truy cập.', 'error');
-                photoFeedback.textContent = 'Không thể truy cập webcam. Vui lòng kiểm tra thiết bị và quyền truy cập.';
-                photoFeedback.classList.remove('hidden');
-            });
-    }
-}
-
-function closePhotoModal() {
-    photoModal.classList.add('hidden');
-    if (videoStream) {
-        videoStream.getTracks().forEach(track => track.stop());
-        videoStream = null;
-    }
-    selectedAthleteId = null;
-    renderAthletes();
-}
-
-function capturePhoto() {
-    const context = photoCanvas.getContext('2d');
-    photoCanvas.width = webcamPreview.videoWidth;
-    photoCanvas.height = webcamPreview.videoHeight;
-    context.drawImage(webcamPreview, 0, 0, photoCanvas.width, photoCanvas.height);
-    capturedImageURL = photoCanvas.toDataURL('image/png');
-    capturedPhoto.src = capturedImageURL;
-    webcamPreview.classList.add('hidden');
-    capturedPhoto.classList.remove('hidden');
-    captureBtn.classList.add('hidden');
-    retakeBtn.classList.remove('hidden');
-    confirmBtn.classList.remove('hidden');
-}
-
-function retakePhoto() {
-    webcamPreview.classList.remove('hidden');
-    capturedPhoto.classList.add('hidden');
-    captureBtn.classList.remove('hidden');
-    retakeBtn.classList.add('hidden');
-    confirmBtn.classList.add('hidden');
-}
-
-function confirmPhoto() {
-    if (!selectedAthleteId) {
-        showNotification('Vui lòng chọn vận động viên trước khi xác nhận.', 'error');
+// Render pagination
+function renderPagination() {
+    paginationEl.innerHTML = '';
+    const totalPages = Math.ceil(filteredAthletes.length / itemsPerPage);
+    if (totalPages <= 1) {
         return;
     }
-    confirmBtn.disabled = true;
-    confirmBtn.textContent = 'Đang xác nhận...';
-    const athleteToUpdate = athletes.find(a => a.id === selectedAthleteId);
-    if (athleteToUpdate) {
-        athleteToUpdate.checkedIn = true;
-        athleteToUpdate.photo = capturedImageURL;
-        updateAthleteData(athleteToUpdate)
-            .then(() => {
-                saveAthleteData(athletes);
-                renderAthletes();
-                closePhotoModal();
-                showNotification(`Check-in thành công cho ${athleteToUpdate.name}!`, 'success');
-            })
-            .catch(() => showNotification('Lỗi khi check-in. Vui lòng thử lại.', 'error'))
-            .finally(() => {
-                confirmBtn.disabled = false;
-                confirmBtn.textContent = 'Xác nhận';
-            });
-    }
-}
 
-function updateAthleteData(athlete) {
-    if (!isOnline) {
-        let queuedUpdates = JSON.parse(localStorage.getItem('queuedUpdates')) || [];
-        queuedUpdates.push({ id: athlete.id, checkedIn: athlete.checkedIn, photo: athlete.photo });
-        localStorage.setItem('queuedUpdates', JSON.stringify(queuedUpdates));
-        return Promise.resolve();
-    }
-    const data = { id: athlete.id, checkedIn: athlete.checkedIn, photo: athlete.photo };
-    return fetch(WEBAPP_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'updateAthlete', data })
-    })
-        .then(response => response.json())
-        .then(result => {
-            if (result.status === 'success') {
-                if (db) {
-                    const transaction = db.transaction(['athletes'], 'readwrite');
-                    const store = transaction.objectStore('athletes');
-                    store.put(athlete);
+    // Previous button
+    const prevBtn = document.createElement('div');
+    prevBtn.className = 'page-btn';
+    prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+    prevBtn.addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            renderAthleteList();
+            updatePaginationActive();
+        }
+    });
+    paginationEl.appendChild(prevBtn);
+
+    // Page buttons
+    for (let i = 1; i <= totalPages; i++) {
+        if (totalPages > 7) {
+            // Skip some pages for better UI when there are many pages
+            if (i !== 1 && i !== totalPages && (i < currentPage - 1 || i > currentPage + 1)) {
+                if (i === 2 || i === totalPages - 1) {
+                    const dots = document.createElement('div');
+                    dots.className = 'page-btn';
+                    dots.textContent = '...';
+                    dots.style.pointerEvents = 'none';
+                    paginationEl.appendChild(dots);
                 }
-            } else {
-                throw new Error(result.message);
+                continue;
             }
-        });
-}
-
-function saveAthleteData(data) {
-    localStorage.setItem('athleteData', JSON.stringify(data));
-}
-
-function loadAthleteData() {
-    const data = localStorage.getItem('athleteData');
-    return data ? JSON.parse(data) : [];
-}
-
-function initDatabase() {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-    request.onsuccess = (event) => {
-        db = event.target.result;
-        loadInitialData();
-    };
-    request.onupgradeneeded = (event) => {
-        const db = event.target.result;
-        if (!db.objectStoreNames.contains('athletes')) {
-            const store = db.createObjectStore('athletes', { keyPath: 'id' });
-            store.createIndex('bib', 'bib', { unique: true });
         }
-    };
-}
-
-function fetchAthleteData() {
-    if (!isOnline) {
-        showNotification('Chế độ ngoại tuyến. Dữ liệu có thể không mới.', 'warning');
-        return Promise.resolve();
-    }
-    refreshBtn.disabled = true;
-    refreshBtn.querySelector('.fa-sync').classList.add('hidden');
-    refreshBtn.querySelector('.fa-spinner').classList.remove('hidden');
-    return fetch(GITHUB_DATA_URL) // Fetch từ GitHub thay vì Google Sheets trực tiếp
-        .then(response => response.json())
-        .then(data => {
-            athletes = data.map((row, i) => ({
-                id: parseInt(row[0]),
-                bib: row[1],
-                name: row[2],
-                gender: row[3],
-                distance: row[4],
-                checkedIn: row[5] === 'TRUE',
-                photo: row[6] || ''
-            }));
-            saveAthleteData(athletes);
-            if (db) {
-                const transaction = db.transaction(['athletes'], 'readwrite');
-                const store = transaction.objectStore('athletes');
-                store.clear();
-                athletes.forEach(athlete => store.add(athlete));
-            }
-            renderAthletes();
-            showNotification('Dữ liệu đã được cập nhật từ GitHub.', 'success');
-        })
-        .catch(() => {
-            showNotification('Lỗi tải dữ liệu từ GitHub. Vui lòng kiểm tra mạng.', 'error');
-        })
-        .finally(() => {
-            refreshBtn.disabled = false;
-            refreshBtn.querySelector('.fa-sync').classList.remove('hidden');
-            refreshBtn.querySelector('.fa-spinner').classList.add('hidden');
+        const pageBtn = document.createElement('div');
+        pageBtn.className = 'page-btn';
+        pageBtn.textContent = i;
+        pageBtn.dataset.page = i;
+        if (i === currentPage) {
+            pageBtn.classList.add('active');
+        }
+        pageBtn.addEventListener('click', () => {
+            currentPage = i;
+            renderAthleteList();
+            updatePaginationActive();
         });
+        paginationEl.appendChild(pageBtn);
+    }
+
+    // Next button
+    const nextBtn = document.createElement('div');
+    nextBtn.className = 'page-btn';
+    nextBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+    nextBtn.addEventListener('click', () => {
+        if (currentPage < totalPages) {
+            currentPage++;
+            renderAthleteList();
+            updatePaginationActive();
+        }
+    });
+    paginationEl.appendChild(nextBtn);
 }
 
-function loadInitialData() {
-    if (db) {
-        const transaction = db.transaction(['athletes'], 'readonly');
-        const store = transaction.objectStore('athletes');
-        const request = store.getAll();
-        request.onsuccess = () => {
-            athletes = request.result.length ? request.result : loadAthleteData();
-            renderAthletes();
-        };
-        request.onerror = () => fetchAthleteData();
+// Update active pagination button
+function updatePaginationActive() {
+    const pageButtons = paginationEl.querySelectorAll('.page-btn');
+    pageButtons.forEach(btn => {
+        if (btn.dataset.page) {
+            btn.classList.toggle('active', parseInt(btn.dataset.page) === currentPage);
+        }
+    });
+}
+
+// QR Scanner functionality
+function openQrScanner() {
+    qrModalEl.style.display = 'block';
+    const qrConfig = {
+        fps: 10,
+        qrbox: {width: 250, height: 250},
+        rememberLastUsedCamera: true
+    };
+    qrScanner = new Html5Qrcode("qr-reader");
+    qrScanner.start(
+        {facingMode: "environment"}, 
+        qrConfig, 
+        onQrSuccess,
+        onQrFailure
+    );
+}
+
+function closeQrScanner() {
+    qrModalEl.style.display = 'none';
+    if (qrScanner && qrScanner.isScanning) {
+        qrScanner.stop().catch(error => console.error('Error stopping QR scanner:', error));
+    }
+}
+
+function onQrSuccess(decodedText) {
+    closeQrScanner();
+    // Find the athlete with the matching ID or BIB
+    const athlete = athletes.find(a => 
+        a.id === decodedText || 
+        a.bib === decodedText || 
+        `${a.id}-${a.bib}` === decodedText
+    );
+    if (athlete) {
+        selectedAthlete = athlete;
+        openCameraModal(athlete);
     } else {
-        athletes = loadAthleteData();
-        renderAthletes();
+        alert('Không tìm thấy vận động viên với mã QR này.');
     }
 }
 
-// Event Listeners
-searchInput.addEventListener('input', debounce(renderAthletes));
-refreshBtn.addEventListener('click', fetchAthleteData);
-checkinBtn.addEventListener('click', () => {
-    if (selectedAthleteId) openPhotoModal();
-    else showNotification('Vui lòng chọn vận động viên để check-in.', 'warning');
-});
-distanceFilterBtns.forEach(btn => {
-    btn.addEventListener('click', function() {
-        selectedDistance = this.dataset.filter;
-        distanceFilterBtns.forEach(b => b.classList.remove('active'));
-        this.classList.add('active');
-        renderAthletes();
-    });
-});
-genderFilterBtns.forEach(btn => {
-    btn.addEventListener('click', function() {
-        selectedGender = this.dataset.gender;
-        genderFilterBtns.forEach(b => b.classList.remove('active'));
-        this.classList.add('active');
-        renderAthletes();
-    });
-});
-closeModalBtn.addEventListener('click', closePhotoModal);
-captureBtn.addEventListener('click', capturePhoto);
-retakeBtn.addEventListener('click', retakePhoto);
-confirmBtn.addEventListener('click', confirmPhoto);
-window.addEventListener('online', () => {
-    isOnline = true;
-    showNotification('Đã kết nối mạng trở lại.', 'success');
-    const queuedUpdates = JSON.parse(localStorage.getItem('queuedUpdates')) || [];
-    Promise.all(queuedUpdates.map(update => {
-        const athlete = athletes.find(a => a.id === update.id);
-        if (athlete) {
-            athlete.checkedIn = update.checkedIn;
-            athlete.photo = update.photo;
-            return updateAthleteData(athlete);
-        }
-        return Promise.resolve();
-    })).then(() => {
-        localStorage.removeItem('queuedUpdates');
-        fetchAthleteData();
-    });
-});
-window.addEventListener('offline', () => {
-    isOnline = false;
-    showNotification('Chế độ ngoại tuyến. Chức năng bị hạn chế.', 'warning');
-});
+function onQrFailure(error) {
+    // QR code scanning failed, silent failure is fine
+    console.log('QR scan error:', error);
+}
 
-// Initialize
-initDatabase();
+// Camera functionality
+function openCameraModal(athlete) {
+    cameraModalEl.style.display = 'block';
+    athleteNamePreviewEl.textContent = `Tên: ${athlete.name || 'N/A'}`;
+    athleteBibPreviewEl.textContent = `BIB: ${athlete.bib || 'N/A'}`;
+    // Reset camera UI
+    capturedImageEl.style.display = 'none';
+    videoEl.style.display = 'block';
+    captureBtnEl.style.display = 'block';
+    confirmCheckinBtnEl.style.display = 'none';
+
+    // Start camera
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                videoEl.srcObject = stream;
+            })
+            .catch(error => {
+                console.error('Error accessing camera:', error);
+                alert('Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập.');
+            });
+    } else {
+        alert('Trình duyệt của bạn không hỗ trợ chức năng camera.');
+    }
+}
+
+function closeCameraModal() {
+    cameraModalEl.style.display = 'none';
+    // Stop camera stream
+    if (videoEl.srcObject) {
+        videoEl.srcObject.getTracks().forEach(track => track.stop());
+        videoEl.srcObject = null;
+    }
+}
+
+function captureImage() {
+    canvasEl.width = videoEl.videoWidth;
+    canvasEl.height = videoEl.videoHeight;
+    canvasEl.getContext('2d').drawImage(videoEl, 0, 0, canvasEl.width, canvasEl.height);
+    const imageDataUrl = canvasEl.toDataURL('image/png');
+    capturedImageEl.src = imageDataUrl;
+    capturedImageEl.style.display = 'block';
+
+    // Stop camera stream and show confirm button
+    videoEl.style.display = 'none';
+    captureBtnEl.style.display = 'none';
+    confirmCheckinBtnEl.style.display = 'block';
+    if (videoEl.srcObject) {
+        videoEl.srcObject.getTracks().forEach(track => track.stop());
+        videoEl.srcObject = null;
+    }
+}
+
+async function confirmCheckin() {
+    if (!selectedAthlete) {
+        alert('Không tìm thấy thông tin vận động viên.');
+        return;
+    }
+    showLoading();
+    try {
+        // Convert image to blob for upload
+        const imageBlob = await new Promise(resolve => {
+            canvasEl.toBlob(blob => resolve(blob), 'image/jpeg', 0.8);
+        });
+
+        // Create form data
+        const formData = new FormData();
+        formData.append('action', 'checkin');
+        formData.append('id', selectedAthlete.id || '');
+        formData.append('bib', selectedAthlete.bib || '');
+        formData.append('image', imageBlob, `${selectedAthlete.bib || 'unknown'}.jpg`);
+
+        // Send to Google Apps Script Web App
+        const response = await fetch(WEBAPP_URL, {
+            method: 'POST',
+            body: formData
+        });
+        if (response.ok) {
+            const result = await response.json();
+            if (result.success) {
+                alert('Check-in thành công!');
+                closeCameraModal();
+                loadAthletes(); // Reload data after check-in
+            } else {
+                alert('Check-in thất bại. Vui lòng thử lại.');
+            }
+        } else {
+            throw new Error('Server error');
+        }
+    } catch (error) {
+        console.error('Error confirming check-in:', error);
+        alert('Đã xảy ra lỗi khi xác nhận check-in.');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Utility functions
+function showLoading() {
+    loadingEl.style.display = 'block';
+}
+
+function hideLoading() {
+    loadingEl.style.display = 'none';
+}
