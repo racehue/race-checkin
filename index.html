@@ -3,85 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ứng dụng Check-in Sự kiện Thể thao</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/@tailwindcss/browser@latest"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <title>Race Check-in System</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col">
-    <header class="fixed top-0 left-0 right-0 bg-gradient-to-r from-blue-500 to-purple-500 text-white py-4 text-center shadow-md z-50 transition-all duration-300">
-        <div class="container mx-auto px-4 flex justify-between items-center">
-            <h1 class="text-xl font-semibold tracking-tight">Race Check-in</h1>
-            <div class="flex gap-2">
-                <button id="refresh-btn" class="action-btn bg-green-500 hover:bg-green-600 text-white font-semibold rounded-md shadow-md transition-all duration-200 transform hover:scale-105 flex items-center gap-2" aria-label="Làm mới dữ liệu">
-                    <i class="fas fa-sync"></i> <span class="hidden sm:inline">Làm mới</span>
-                    <i class="fas fa-spinner fa-spin hidden"></i>
+<body>
+    <header>
+        <div class="container header-content">
+            <div class="logo">Race Check-in</div>
+            <div class="header-actions">
+                <button class="btn btn-success" id="refresh-btn">
+                    <i class="fas fa-sync"></i> Làm mới
                 </button>
-                <button id="checkin-btn" class="action-btn bg-yellow-500 hover:bg-yellow-600 text-gray-800 font-semibold rounded-md shadow-md transition-all duration-200 transform hover:scale-105 flex items-center gap-2" aria-label="Thực hiện check-in">
-                    <i class="fas fa-check-double"></i> <span class="hidden sm:inline">Check-in</span>
+                <button class="btn btn-warning" id="qr-scan-btn">
+                    <i class="fas fa-qrcode"></i> Check-in
                 </button>
             </div>
         </div>
     </header>
-    <main class="container mx-auto px-4 py-6 flex-grow mt-20">
-        <section class="bg-white rounded-lg shadow-md p-6 mb-6 transition-all duration-300 hover:shadow-lg">
-            <div class="flex flex-col sm:flex-row gap-4 items-center">
-                <input type="text" id="search-input" placeholder="Tìm kiếm vận động viên..." aria-label="Tìm kiếm vận động viên" class="w-full sm:w-auto px-4 py-2 rounded-md border border-gray-300 focus:border-blue-500 focus:ring-blue-500 transition-all duration-200">
-                <div class="flex items-center gap-4">
-                    <div class="filter-group flex items-center gap-2">
-                        <label for="distance-filter" class="text-gray-700 font-medium">Khoảng cách:</label>
-                        <div class="button-group flex gap-2">
-                            <button data-filter="all" class="distance-filter-btn action-btn bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-md transition-all duration-200 px-3 py-1.5 font-medium active" aria-pressed="true">Tất cả</button>
-                            <button data-filter="5km" class="distance-filter-btn action-btn bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-md transition-all duration-200 px-3 py-1.5 font-medium" aria-pressed="false">5km</button>
-                            <button data-filter="10km" class="distance-filter-btn action-btn bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-md transition-all duration-200 px-3 py-1.5 font-medium" aria-pressed="false">10km</button>
-                            <button data-filter="21km" class="distance-filter-btn action-btn bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-md transition-all duration-200 px-3 py-1.5 font-medium" aria-pressed="false">21km</button>
-                            <button data-filter="42km" class="distance-filter-btn action-btn bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-md transition-all duration-200 px-3 py-1.5 font-medium" aria-pressed="false">42km</button>
-                        </div>
-                    </div>
-                    <div class="filter-group flex items-center gap-2">
-                        <label for="gender-filter" class="text-gray-700 font-medium">Giới tính:</label>
-                        <div class="button-group flex gap-2">
-                            <button data-gender="all" class="gender-filter-btn action-btn bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-md transition-all duration-200 px-3 py-1.5 font-medium active" aria-pressed="true">Tất cả</button>
-                            <button data-gender="nam" class="gender-filter-btn action-btn bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-md transition-all duration-200 px-3 py-1.5 font-medium" aria-pressed="false">Nam</button>
-                            <button data-gender="nữ" class="gender-filter-btn action-btn bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-md transition-all duration-200 px-3 py-1.5 font-medium" aria-pressed="false">Nữ</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="flex justify-between items-center mt-4">
-                <span id="results-count" class="text-gray-600 font-medium text-sm">[0/0]</span>
-            </div>
-            <div id="no-results" class="hidden no-results text-center py-4 text-gray-500 font-medium rounded-md bg-gray-50 border border-dashed border-gray-300" role="alert">Không tìm thấy vận động viên nào.</div>
-        </section>
-        <section id="athletes-list" class="space-y-4"></section>
-    </main>
-    <footer class="bg-gradient-to-r from-blue-500 to-purple-500 text-white py-4 text-center mt-auto transition-all duration-300">
-        <div class="container mx-auto px-4">
-            © 2024 Race Check-in. All rights reserved.
+    <main class="container">
+        <div class="search-container">
+            <input type="text" class="search-input" id="search-input" placeholder="Tìm kiếm vận động viên...">
+            <button class="btn btn-primary" id="search-btn">
+                <i class="fas fa-search"></i>
+            </button>
         </div>
-    </footer>
-    <div id="photo-modal" class="modal fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 z-50 hidden transition-opacity duration-300" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-        <div class="modal-content relative top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg w-full max-w-md transition-all duration-300">
-            <div class="modal-header flex justify-between items-center p-4 border-b border-gray-200">
-                <h2 id="modal-title" class="text-xl font-semibold text-gray-800">Chụp ảnh VĐV</h2>
-                <button id="close-modal" class="close-button action-btn text-gray-500 hover:text-gray-700 transition-colors duration-200" aria-label="Đóng modal">
-                    <i class="fas fa-times text-2xl"></i>
-                </button>
+        <div class="tabs">
+            <div class="tab active" data-tab="all">Tất cả</div>
+            <div class="tab" data-tab="checked-in">Đã check-in</div>
+            <div class="tab" data-tab="not-checked-in">Chưa check-in</div>
+        </div>
+        <div class="category-filters">
+            <div class="category-filter active" data-category="all">Tất cả</div>
+            <div class="category-filter" data-category="21km">21km</div>
+            <div class="category-filter" data-category="42km">42km</div>
+            <div class="category-filter" data-category="Nam">Nam</div>
+            <div class="category-filter" data-category="Nữ">Nữ</div>
+        </div>
+        <div class="athlete-list" id="athlete-list">
+            <!-- Athletes will be populated here -->
+        </div>
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Đang tải dữ liệu...</p>
+        </div>
+        <div class="pagination" id="pagination">
+            <!-- Pagination buttons will be added here -->
+        </div>
+    </main>
+    <!-- QR Scanner Modal -->
+    <div class="modal" id="qr-modal">
+        <div class="modal-content">
+            <span class="close" id="close-qr-modal">&times;</span>
+            <h2>Quét mã QR</h2>
+            <div id="qr-reader"></div>
+        </div>
+    </div>
+    <!-- Camera Modal -->
+    <div class="modal" id="camera-modal">
+        <div class="modal-content">
+            <span class="close" id="close-camera-modal">&times;</span>
+            <h2>Chụp ảnh check-in</h2>
+            <div id="athlete-preview">
+                <p id="athlete-name-preview"></p>
+                <p id="athlete-bib-preview"></p>
             </div>
-            <div class="modal-body p-4">
-                <div id="webcam-container" class="relative rounded-md overflow-hidden">
-                    <video id="webcam-preview" autoplay playsinline class="w-full max-h-[300px]"></video>
-                    <canvas id="photo-canvas" class="hidden"></canvas>
-                </div>
-                <img id="captured-photo" src="" alt="Ảnh đã chụp" class="hidden rounded-md w-full max-h-[300px] object-cover">
-                <div id="photo-feedback" class="feedback mt-4 p-3 rounded-md text-center font-medium hidden" role="alert"></div>
+            <div id="camera-preview">
+                <video id="video" width="100%" height="100%" autoplay></video>
+                <canvas id="canvas" style="display:none;"></canvas>
             </div>
-            <div class="modal-footer flex justify-end p-4 gap-3 border-t border-gray-200">
-                <button id="capture-btn" class="capture-btn action-btn bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-md shadow-md transition-all duration-200 px-4 py-2">Chụp ảnh</button>
-                <button id="retake-btn" class="retake-btn action-btn bg-yellow-500 hover:bg-yellow-600 text-gray-800 font-semibold rounded-md shadow-md transition-all duration-200 px-4 py-2 hidden">Chụp lại</button>
-                <button id="confirm-btn" class="confirm-btn action-btn bg-green-500 hover:bg-green-600 text-white font-semibold rounded-md shadow-md transition-all duration-200 px-4 py-2 hidden">Xác nhận</button>
-            </div>
+            <img id="captured-image">
+            <button class="btn btn-primary" id="capture-btn">
+                <i class="fas fa-camera"></i> Chụp ảnh
+            </button>
+            <button class="btn btn-success" id="confirm-checkin-btn" style="display:none;">
+                <i class="fas fa-check"></i> Xác nhận check-in
+            </button>
         </div>
     </div>
     <script src="script.js"></script>
