@@ -57,7 +57,6 @@ async function initApp() {
     try {
         await fetchAthletes();
         updateStats();
-        // Initialize QR code scanner
         html5QrCode = new Html5Qrcode("qr-reader");
     } catch (error) {
         showAlert('Error initializing application. Please refresh the page.', 'error');
@@ -69,7 +68,6 @@ async function initApp() {
 // Fetch athletes data
 async function fetchAthletes() {
     try {
-        // Try to fetch from Google Sheets first
         const sheetData = await fetchFromGoogleSheet();
         if (sheetData && sheetData.length > 0) {
             athletes = sheetData;
@@ -80,7 +78,6 @@ async function fetchAthletes() {
     } catch (error) {
         console.error('Error fetching athlete data:', error);
         showAlert('Error loading athlete data. Please try again later.', 'error');
-        // Use fallback mock data for testing
         athletes = generateMockData();
     }
 }
@@ -127,7 +124,6 @@ async function saveToGoogleSheet() {
                 }))
             })
         });
-
         const result = await response.json();
         return result.success;
     } catch (error) {
@@ -364,134 +360,3 @@ async function startCamera() {
     try {
         cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
         cameraView.srcObject = cameraStream;
-        cameraView.style.display = 'block';
-        startCameraBtn.style.display = 'none';
-        captureButton.style.display = 'block';
-        await cameraView.play();
-    } catch (error) {
-        console.error('Error starting camera:', error);
-        showAlert('Unable to access camera. Please check permissions.', 'error');
-    }
-}
-
-// Stop camera stream
-function stopCamera() {
-    if (cameraStream) {
-        cameraStream.getTracks().forEach(track => track.stop());
-        cameraStream = null;
-    }
-    cameraView.srcObject = null;
-}
-
-// Capture photo
-function capturePhoto() {
-    if (!cameraStream) return;
-    const context = cameraCanvas.getContext('2d');
-    cameraCanvas.width = cameraView.videoWidth;
-    cameraCanvas.height = cameraView.videoHeight;
-    context.drawImage(cameraView, 0, 0, cameraCanvas.width, cameraCanvas.height);
-    const imageDataUrl = cameraCanvas.toDataURL('image/jpeg');
-    capturedImage.src = imageDataUrl;
-    capturedImage.style.display = 'block';
-    cameraView.style.display = 'none';
-    captureButton.style.display = 'none';
-    retryCaptureBtn.style.display = 'block';
-    photoTaken = true;
-    stopCamera();
-}
-
-// Retry photo capture
-function retryCapture() {
-    capturedImage.style.display = 'none';
-    retryCaptureBtn.style.display = 'none';
-    photoTaken = false;
-    startCamera();
-}
-
-// Confirm athlete check-in
-async function confirmCheckin() {
-    if (!currentAthlete) return;
-    if (!photoTaken) {
-        showAlert('Please take a photo of the athlete with their bib number', 'warning');
-        return;
-    }
-    showLoading();
-    try {
-        const bibPhoto = capturedImage.src;
-        const athleteIndex = athletes.findIndex(a => a.id === currentAthlete.id);
-        if (athleteIndex >= 0) {
-            athletes[athleteIndex].checked_in = true;
-            athletes[athleteIndex].bib_photo = bibPhoto;
-            athletes[athleteIndex].check_in_time = new Date().toISOString();
-        }
-        updateStats();
-        addToActivityLog(`Checked in: ${currentAthlete.full_name} (Bib #${currentAthlete.bib_number})`);
-        await saveData();
-        closeAthleteModal();
-        showAlert(`${currentAthlete.full_name} successfully checked in!`, 'success');
-    } catch (error) {
-        console.error('Error during check-in:', error);
-        showAlert('Error saving check-in data. Please try again.', 'error');
-    }
-    hideLoading();
-}
-
-// Save data to storage
-async function saveData() {
-    try {
-        const googleSheetSuccess = await saveToGoogleSheet();
-        if (!googleSheetSuccess) throw new Error('Google Sheet sync failed');
-        return true;
-    } catch (error) {
-        console.error('Sync error:', error);
-        showAlert('Đang lưu vào bộ nhớ tạm...', 'warning');
-        localStorage.setItem('athletes_data', JSON.stringify(athletes));
-        return false;
-    }
-}
-
-// Add entry to activity log
-function addToActivityLog(message) {
-    const timestamp = new Date().toLocaleTimeString();
-    const logEntry = document.createElement('div');
-    logEntry.className = 'log-entry';
-    logEntry.innerHTML = `<span class="log-time">${timestamp}</span> ${message}`;
-    activityLog.insertBefore(logEntry, activityLog.firstChild);
-}
-
-// Show alert message
-function showAlert(message, type = 'info') {
-    const alert = document.createElement('div');
-    alert.className = `alert alert-${type}`;
-    alert.innerHTML = `
-        <span class="alert-message">${message}</span>
-        <button class="alert-close">&times;</button>
-    `;
-    const closeBtn = alert.querySelector('.alert-close');
-    closeBtn.addEventListener('click', () => alert.remove());
-    document.body.appendChild(alert);
-    setTimeout(() => {
-        if (document.body.contains(alert)) {
-            alert.remove();
-        }
-    }, 5000);
-}
-
-// Show loading overlay
-function showLoading() {
-    loadingOverlay.style.display = 'flex';
-}
-
-// Hide loading overlay
-function hideLoading() {
-    loadingOverlay.style.display = 'none';
-}
-
-// Export functions for potential external use
-window.app = {
-    searchAthlete,
-    startQRScanner,
-    closeAthleteModal,
-    confirmCheckin,
-    switchTab
-};
