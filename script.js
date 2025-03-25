@@ -5,6 +5,88 @@ let html5QrCode = null;
 let cameraStream = null;
 let photoTaken = false;
 
+// Replace these with your actual deployed web app URL
+const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbwd2dmoqXdXcnZCCNjJLEN6YskOPWDdQYfeRfZDAb1HI5T0liAQ-qnpXkU6iP7HNnA0Aw/exec';
+
+// Modify fetchFromGoogleSheet function to use POST request
+async function fetchFromGoogleSheet() {
+    try {
+        const response = await fetch(SHEET_API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+                operation: 'retrieve' 
+            })
+        });
+        
+        if (!response.ok) throw new Error('Failed to fetch from Google Sheet');
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            return result.athletes;
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+        console.error('Google Sheet fetch error:', error);
+        return null;
+    }
+}
+
+// Modify saveToGitHub (or create a new function) to sync with Google Sheet
+async function saveToGoogleSheet() {
+    try {
+        const response = await fetch(SHEET_API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+                operation: 'sync',
+                athletes: athletes
+            })
+        });
+        
+        if (!response.ok) throw new Error('Failed to save to Google Sheet');
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            console.log('Data saved to Google Sheet successfully');
+            return true;
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+        console.error('Google Sheet save error:', error);
+        return false;
+    }
+}
+
+// Update saveData function to include Google Sheet saving
+async function saveData() {
+    try {
+        // First try to save to Google Sheet
+        const googleSheetSuccess = await saveToGoogleSheet();
+        if (googleSheetSuccess) return true;
+        
+        // If Google Sheet fails, try GitHub
+        const githubSuccess = await saveToGitHub();
+        if (githubSuccess) return true;
+        
+        // If both fail, save to local storage
+        localStorage.setItem('athletes_data', JSON.stringify(athletes));
+        console.log('Data saved to local storage');
+        return true;
+    } catch (error) {
+        console.error('Error saving data:', error);
+        throw error;
+    }
+}
+
 // GitHub configuration
 const GITHUB_TOKEN = 'ghp_11BQPVGFI0zOa7bCH0l1Bp_u0OlKmIACymFgikVSoTKHaTKonB7a7nr8EuYck1ZHpVTHPKOH2AeiL43Mnk';
 const GITHUB_OWNER = 'racehue';
