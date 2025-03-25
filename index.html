@@ -1,67 +1,67 @@
 <!DOCTYPE html>
- <html lang="vi">
- <head>
-     <meta charset="UTF-8">
-     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-     <title>THANH KHÊ OPEN 2025</title>
-     <link rel="stylesheet" href="style.css">
- </head>
- <body>
-     <header>
-         <h1>THANH KHÊ OPEN 2025</h1>
-     </header>
- 
-     <div class="filters">
-         <div class="filter-group">
-             <p>Chọn cự ly:</p>
-             <div class="button-group">
-                 <button class="filter-btn active" data-filter="all">All</button>
-                 <button class="filter-btn" data-filter="5KM">5KM</button>
-                 <button class="filter-btn" data-filter="10KM">10KM</button>
-             </div>
-         </div>
- 
-         <div class="filter-group">
-             <p>Chọn giới tính:</p>
-             <div class="button-group">
-                 <button class="filter-btn active" data-gender="all">All</button>
-                 <button class="filter-btn" data-gender="Nam">Nam</button>
-                 <button class="filter-btn" data-gender="Nữ">Nữ</button>
-             </div>
-         </div>
- 
-         <button id="refresh-btn">Refresh</button>
-     </div>
- 
-     <div class="search-container">
-         <input type="text" id="search-input" placeholder="Tìm tên/ bib">
-         <span id="results-count">[0/0]</span>
-         <button id="filter-btn"><i class="fas fa-filter"></i></button>
-     </div>
- 
-     <div id="athletes-list">
-         <!-- Athletes will be loaded here -->
-     </div>
- 
-     <div class="action-buttons">
-         <button id="checkin-btn">Check in</button>
-         <button id="import-btn">Import VĐV</button>
-         <button id="test-btn">Test</button>
-     </div>
- 
-     <!-- Modal for capturing photo -->
-     <div id="photo-modal" class="modal">
-         <div class="modal-content">
-             <span class="close-btn">&times;</span>
-             <h2>Chụp ảnh check-in</h2>
-             <video id="video" autoplay playsinline></video>
-             <canvas id="canvas" style="display: none;"></canvas>
-             <button id="capture-btn">Chụp ảnh</button>
-             <button id="confirm-btn" style="display: none;">Xác nhận</button>
-         </div>
-     </div>
- 
-     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js"></script>
-     <script src="script.js"></script>
- </body>
- </html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THANH KHÊ OPEN 2025</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/js/all.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1>THANH KHÊ OPEN 2025</h1>
+    </header>
+
+    <!-- Filters -->
+    <div class="filters">
+        <div class="filter-group">
+            <p>Chọn cự ly:</p>
+            <div class="button-group">
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="5KM">5KM</button>
+                <button class="filter-btn" data-filter="10KM">10KM</button>
+            </div>
+        </div>
+        <div class="filter-group">
+            <p>Chọn giới tính:</p>
+            <div class="button-group">
+                <button class="filter-btn active" data-gender="all">All</button>
+                <button class="filter-btn" data-gender="Nam">Nam</button>
+                <button class="filter-btn" data-gender="Nữ">Nữ</button>
+            </div>
+        </div>
+        <button id="refresh-btn"><i class="fas fa-sync"></i> Refresh</button>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="search-container">
+        <input type="text" id="search-input" placeholder="Tìm tên/ bib">
+        <span id="results-count">[0/0]</span>
+        <button id="qr-scan-btn"><i class="fas fa-qrcode"></i> Quét QR</button>
+    </div>
+
+    <!-- Athletes List -->
+    <div id="athletes-list"></div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+        <button id="checkin-btn"><i class="fas fa-check-circle"></i> Check in</button>
+        <button id="export-btn"><i class="fas fa-download"></i> Xuất JSON</button>
+        <button id="commit-btn"><i class="fas fa-cloud-upload-alt"></i> Đẩy lên GitHub</button>
+    </div>
+
+    <!-- Photo Modal -->
+    <div id="photo-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>Chụp ảnh check-in</h2>
+            <video id="video" autoplay playsinline></video>
+            <canvas id="canvas" style="display: none;"></canvas>
+            <button id="capture-btn">Chụp ảnh</button>
+            <button id="confirm-btn" style="display: none;">Xác nhận</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
