@@ -2,6 +2,7 @@
 const SHEET_ID = '1kdt68gFOrTyirvo69oRDpAJDM7y_iGxvXM3HLDb57kw';
 const API_KEY = 'AIzaSyAMjzUR6DiIiSBkxaqtohn4YJqlm9njUu0';
 const GITHUB_TOKEN = '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';
+const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwd2dmoqXdXcnZCCNjJLEN6YskOPWDdQYfeRfZDAb1HI5T0liAQ-qnpXkU6iP7HNnA0Aw/exec';
 let athletes = [];
 let filteredAthletes = [];
 
@@ -152,3 +153,38 @@ document.getElementById('confirm-btn').addEventListener('click', async () => {
  `;
  
  document.head.appendChild(style);
+document.getElementById('qr-scan-btn').addEventListener('click', () => {
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+        .then(stream => {
+            const video = document.createElement('video');
+            video.srcObject = stream;
+            video.setAttribute('autoplay', '');
+            video.setAttribute('playsinline', '');
+            document.body.appendChild(video);
+
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+
+            video.addEventListener('play', () => {
+                function scanQR() {
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                    const qrCode = jsQR(imageData.data, canvas.width, canvas.height);
+
+                    if (qrCode) {
+                        const athleteId = qrCode.data; // Giả sử mã QR chứa ID vận động viên
+                        checkInAthlete(athleteId);
+                        stream.getTracks().forEach(track => track.stop());
+                        video.remove();
+                    } else {
+                        requestAnimationFrame(scanQR);
+                    }
+                }
+                scanQR();
+            });
+        })
+        .catch(error => {
+            console.error('Error accessing camera:', error);
+            alert('Không thể truy cập camera.');
+        });
+});
