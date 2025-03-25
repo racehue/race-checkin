@@ -130,3 +130,12 @@ header {
     text-align: center;
     width: 400px;
 }
+.athlete-card {
+    transform-style: preserve-3d;
+    transition: transform 0.5s;
+}
+
+.athlete-card:hover {
+    transform: rotateY(10deg) scale(1.05);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
