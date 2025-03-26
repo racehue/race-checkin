@@ -245,6 +245,40 @@ function setupEventListeners() {
             card.classList.toggle('selected');
         }
     });
+
+    // QR Code Scanning
+    document.getElementById('qr-scan-btn').addEventListener('click', async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            const video = document.createElement('video');
+            video.setAttribute('autoplay', '');
+            video.setAttribute('playsinline', '');
+            video.srcObject = stream;
+            document.body.appendChild(video);
+
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+
+            function scanQR() {
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                const qrCode = jsQR(imageData.data, canvas.width, canvas.height);
+
+                if (qrCode) {
+                    const athleteId = qrCode.data; // Giả sử mã QR chứa ID vận động viên
+                    checkInAthlete(athleteId);
+                    stream.getTracks().forEach(track => track.stop());
+                    video.remove();
+                } else {
+                    requestAnimationFrame(scanQR);
+                }
+            }
+            scanQR();
+        } catch (error) {
+            console.error('Error accessing camera:', error);
+            showNotification('Không thể truy cập camera.', 'error');
+        }
+    });
 }
 
 // Show notification
