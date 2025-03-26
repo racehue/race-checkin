@@ -351,36 +351,69 @@ function checkInSelectedAthletes() {
 }
 
 
+// ... (Phần đầu của script.js giữ nguyên) ...
+
+// --- Check-in Logic ---
+
+// ... (hàm checkInAthlete, checkInSelectedAthletes giữ nguyên) ...
+
 /**
  * Shows the photo capture modal.
  */
 async function showPhotoModal() {
     if (!currentModalAthlete) return;
 
-    // Reset modal state
-    modalVideo.style.display = 'block';
-    modalCanvas.style.display = 'none';
-    modalCaptureBtn.style.display = 'inline-block';
-    modalRetakeBtn.style.display = 'none';
-    modalConfirmBtn.style.display = 'none';
-    modalCameraError.style.display = 'none';
+    // Reset modal state VERY carefully
+    modalVideo.style.display = 'block'; // Ensure video is visible initially
+    modalCanvas.style.display = 'none'; // Ensure canvas is hidden
+    modalCaptureBtn.style.display = 'inline-block'; // Show capture button
+    modalRetakeBtn.style.display = 'none'; // Hide retake button
+    modalConfirmBtn.style.display = 'none'; // Hide confirm button
+    modalCameraError.style.display = 'none'; // Hide error message
     modalAthleteInfo.textContent = `VĐV: ${currentModalAthlete.name} (BIB: ${currentModalAthlete.bib})`;
+    // Reset confirm button state in case it was left disabled/loading
+    modalConfirmBtn.disabled = false;
+    modalConfirmBtn.innerHTML = '<i class="fas fa-check"></i> Xác nhận Check-in';
 
 
     photoModal.setAttribute('aria-hidden', 'false');
+    // Optionally focus the capture button for accessibility
+    // setTimeout(() => modalCaptureBtn.focus(), 100);
 
     try {
-        // Prefer back camera for QR, maybe front for check-in photos?
-        const constraints = { video: { facingMode: 'user' } }; // 'user' for front camera
+        console.log("Requesting camera stream...");
+        const constraints = { video: { facingMode: 'user' } };
         cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+        console.log("Camera stream obtained.");
         modalVideo.srcObject = cameraStream;
-        modalVideo.play(); // Ensure video plays
+
+        // Important: Wait for video metadata to load to get dimensions correctly
+        await new Promise((resolve, reject) => {
+            modalVideo.onloadedmetadata = () => {
+                console.log("Video metadata loaded.");
+                resolve();
+            };
+            modalVideo.onerror = (e) => {
+                 console.error("Video element error:", e);
+                 reject(new Error("Lỗi tải video từ camera"));
+            }
+            // Add a timeout in case loadedmetadata never fires
+            setTimeout(() => reject(new Error("Hết thời gian chờ video metadata")), 5000);
+        });
+
+        // Play the video *after* metadata is loaded
+        await modalVideo.play();
+        console.log("Video playing.");
+
+
     } catch (error) {
-        console.error('Error accessing camera:', error);
-        modalCameraError.textContent = `Lỗi camera: ${error.name}. Vui lòng cấp quyền và thử lại.`;
+        console.error('Error accessing or playing camera:', error);
+        modalCameraError.textContent = `Lỗi camera: ${error.name} - ${error.message}. Vui lòng cấp quyền và thử lại.`;
         modalCameraError.style.display = 'block';
         modalCaptureBtn.style.display = 'none'; // Disable capture if no camera
-        // Optionally disable confirm too?
+        // Stop any partial stream
+        hidePhotoModal(); // Clean up stream tracks etc.
+        photoModal.setAttribute('aria-hidden', 'true'); // Ensure modal is hidden if setup failed badly
     }
 }
 
@@ -388,78 +421,148 @@ async function showPhotoModal() {
  * Hides the photo capture modal and cleans up resources.
  */
 function hidePhotoModal() {
+    console.log("Hiding photo modal and cleaning up camera stream.");
     if (cameraStream) {
-        cameraStream.getTracks().forEach(track => track.stop());
-        cameraStream = null; // Clear the stream
+        cameraStream.getTracks().forEach(track => {
+            track.stop();
+            console.log(`Camera track stopped: ${track.kind}`);
+        });
+        cameraStream = null; // Clear the stream variable
     }
-    modalVideo.srcObject = null; // Release video source
+    if (modalVideo) { // Check if modalVideo exists
+        modalVideo.srcObject = null; // Release video source
+        modalVideo.pause(); // Ensure video is paused
+        modalVideo.removeAttribute('src'); // Clean up src attribute too
+    }
     photoModal.setAttribute('aria-hidden', 'true');
     currentModalAthlete = null; // Clear the athlete being processed
-    // Reset button states just in case
-    modalCaptureBtn.style.display = 'inline-block';
-    modalRetakeBtn.style.display = 'none';
-    modalConfirmBtn.style.display = 'none';
+
+    // Explicitly reset styles again for safety
+    if (modalVideo) modalVideo.style.display = 'block';
+    if (modalCanvas) modalCanvas.style.display = 'none';
+    if (modalCaptureBtn) modalCaptureBtn.style.display = 'inline-block';
+    if (modalRetakeBtn) modalRetakeBtn.style.display = 'none';
+    if (modalConfirmBtn) modalConfirmBtn.style.display = 'none';
+    if (modalCameraError) modalCameraError.style.display = 'none';
+    if (modalConfirmBtn) {
+         modalConfirmBtn.disabled = false;
+         modalConfirmBtn.innerHTML = '<i class="fas fa-check"></i> Xác nhận Check-in';
+    }
+
 }
 
 /**
  * Captures a photo from the video stream onto the canvas.
  */
 function capturePhoto() {
-    if (!cameraStream || !modalVideo.readyState >= modalVideo.HAVE_CURRENT_DATA) {
-        showNotification("Camera chưa sẵn sàng.", "error");
+    console.log("Attempting to capture photo...");
+    // Check if video is ready and has dimensions
+    if (!cameraStream || !modalVideo || modalVideo.readyState < modalVideo.HAVE_METADATA || !modalVideo.videoWidth || !modalVideo.videoHeight) {
+        showNotification("Camera chưa sẵn sàng hoặc video chưa tải.", "error");
+        console.error("Capture failed: Video not ready or dimensions unknown.", {
+             readyState: modalVideo?.readyState,
+             videoWidth: modalVideo?.videoWidth,
+             videoHeight: modalVideo?.videoHeight
+             });
         return;
     }
 
-    const context = modalCanvas.getContext('2d');
-    // Set canvas dimensions based on video aspect ratio to avoid distortion
-    const aspectRatio = modalVideo.videoWidth / modalVideo.videoHeight;
-    modalCanvas.width = modalVideo.videoWidth; // Use actual video width
-    modalCanvas.height = modalVideo.videoHeight; // Use actual video height
+    try {
+        const context = modalCanvas.getContext('2d');
 
-    // Draw the current video frame to the canvas
-    context.drawImage(modalVideo, 0, 0, modalCanvas.width, modalCanvas.height);
+        // Set canvas dimensions explicitly *before* drawing
+        // Use actual video dimensions to avoid distortion
+        modalCanvas.width = modalVideo.videoWidth;
+        modalCanvas.height = modalVideo.videoHeight;
+        console.log(`Canvas dimensions set to: ${modalCanvas.width}x${modalCanvas.height}`);
 
-    // Show canvas, hide video
-    modalVideo.style.display = 'none';
-    modalCanvas.style.display = 'block';
 
-    // Update button visibility
-    modalCaptureBtn.style.display = 'none';
-    modalRetakeBtn.style.display = 'inline-block';
-    modalConfirmBtn.style.display = 'inline-block';
+        // Draw the current video frame to the canvas
+        context.drawImage(modalVideo, 0, 0, modalCanvas.width, modalCanvas.height);
+        console.log("drawImage called successfully.");
 
-    // Pause the video stream to save resources maybe? Optional.
-    // modalVideo.pause();
+
+        // --- CRITICAL: Update display styles ---
+        modalVideo.style.display = 'none';   // Hide video
+        modalCanvas.style.display = 'block'; // Show canvas
+        console.log("Display styles updated: video hidden, canvas shown.");
+
+
+        // Update button visibility
+        modalCaptureBtn.style.display = 'none';
+        modalRetakeBtn.style.display = 'inline-block';
+        modalConfirmBtn.style.display = 'inline-block';
+        console.log("Button visibility updated.");
+
+
+        // Optional: Pause video stream after capture if needed
+        // modalVideo.pause();
+
+    } catch (error) {
+         console.error("Error during photo capture (drawing or style update):", error);
+         showNotification("Lỗi khi chụp ảnh.", "error");
+         // Optionally reset to camera view on error?
+         // retakePhoto();
+    }
 }
 
 /**
  * Switches back to the live camera view from the captured photo.
  */
 function retakePhoto() {
-    modalVideo.style.display = 'block';
-    modalCanvas.style.display = 'none';
-    // modalVideo.play(); // Ensure video plays if paused
+    console.log("Retaking photo...");
+    if (!modalVideo || !modalCanvas) return; // Safety check
 
+    modalVideo.style.display = 'block'; // Show video
+    modalCanvas.style.display = 'none'; // Hide canvas
+
+    // Ensure video plays if it was paused
+    // if (modalVideo.paused) {
+    //     modalVideo.play().catch(e => console.error("Error resuming video:", e));
+    // }
+
+    // Reset button visibility
     modalCaptureBtn.style.display = 'inline-block';
     modalRetakeBtn.style.display = 'none';
     modalConfirmBtn.style.display = 'none';
+    console.log("Retake successful: video shown, canvas hidden, buttons reset.");
 }
 
 /**
  * Confirms the captured photo and proceeds with the check-in update.
  */
 async function confirmCheckIn() {
-    if (!currentModalAthlete || modalCanvas.style.display === 'none') return;
+    // Double-check required elements and state
+    if (!currentModalAthlete || !modalCanvas || modalCanvas.style.display === 'none') {
+        console.error("ConfirmCheckIn called in invalid state.", { currentModalAthlete, modalCanvasExists: !!modalCanvas, canvasVisible: modalCanvas?.style.display !== 'none' });
+        showNotification("Không có ảnh để xác nhận hoặc VĐV không hợp lệ.", "error");
+        return;
+    }
 
     modalConfirmBtn.disabled = true; // Prevent double clicks
     modalConfirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
+    console.log(`Confirming check-in for athlete ID: ${currentModalAthlete.id}`);
 
+    let photoDataUrl = '';
     try {
-        // Get image data (consider quality/size)
-        const photoDataUrl = modalCanvas.toDataURL('image/jpeg', 0.8); // Use JPEG with compression
+        // Get image data (use JPEG for smaller size, adjust quality 0.0-1.0)
+        photoDataUrl = modalCanvas.toDataURL('image/jpeg', 0.85); // Quality 0.85
+        console.log(`Generated photo Data URL (length: ${photoDataUrl.length})`);
+        if (!photoDataUrl || photoDataUrl === 'data:,') {
+             throw new Error("Canvas toDataURL returned empty or invalid data.");
+        }
 
-        // --- Update Google Sheet ---
-        // We use the Web App URL which should handle authentication securely on the server-side (Google Apps Script)
+    } catch (error) {
+        console.error('Error getting photo data from canvas:', error);
+        showNotification('Lỗi xử lý ảnh chụp. Không thể tiếp tục.', 'error');
+        modalConfirmBtn.disabled = false; // Re-enable button
+        modalConfirmBtn.innerHTML = '<i class="fas fa-check"></i> Xác nhận Check-in';
+        return; // Stop the process
+    }
+
+    // --- Now attempt to update Google Sheet ---
+    try {
+        // Pass the generated photoDataUrl
         const success = await updateGoogleSheet(currentModalAthlete.id, photoDataUrl);
 
         if (success) {
@@ -468,7 +571,12 @@ async function confirmCheckIn() {
             if (athleteIndex > -1) {
                 athletes[athleteIndex].checkedIn = true;
                 athletes[athleteIndex].checkinTime = formatDate(new Date());
-                athletes[athleteIndex].photoUrl = photoDataUrl; // Store locally temporarily, GSheet update is the source of truth
+                // Don't store the full base64 locally long-term unless necessary,
+                // but okay for immediate render update. The GSheet is source of truth.
+                athletes[athleteIndex].photoUrl = photoDataUrl;
+                console.log(`Local athlete data updated for ID: ${currentModalAthlete.id}`);
+            } else {
+                 console.warn(`Athlete ID ${currentModalAthlete.id} not found in local array after successful update.`);
             }
 
             showNotification(`VĐV ${currentModalAthlete.name} (BIB: ${currentModalAthlete.bib}) đã check-in thành công!`, 'success');
@@ -477,7 +585,7 @@ async function confirmCheckIn() {
             deselectAthlete(currentModalAthlete.id);
 
             // Re-render the list to show updated status
-            applyFilters();
+            applyFilters(); // applyFilters calls renderAthletes
 
              // Check if there are more selected athletes to process (basic queue)
             const remainingSelected = Array.from(selectedAthleteIds)
@@ -485,31 +593,147 @@ async function confirmCheckIn() {
                                           .filter(a => a && !a.checkedIn);
 
             if (remainingSelected.length > 0) {
+                 console.log(`Processing next selected athlete: ${remainingSelected[0].id}`);
                 // Automatically open modal for the next selected athlete
                 // Small delay to allow notification to be seen
                 setTimeout(() => {
-                    checkInAthlete(remainingSelected[0].id);
-                }, 1000);
+                    // We need to hide the current modal *before* showing the next
+                    // to ensure camera resources are released and re-acquired cleanly.
+                    hidePhotoModal();
+                    setTimeout(() => { // Add another small delay
+                        checkInAthlete(remainingSelected[0].id);
+                    }, 100); // Short delay after hide before show
+                }, 800); // Delay after success notification
             } else {
+                 console.log("No more selected athletes to check in.");
                  hidePhotoModal(); // Close modal only if no more selected athletes
             }
 
         } else {
             // Error handled within updateGoogleSheet, notification shown there
+            // Re-enable button to allow retry
              modalConfirmBtn.disabled = false;
              modalConfirmBtn.innerHTML = '<i class="fas fa-check"></i> Xác nhận Check-in';
-             // Optionally allow retrying without closing modal?
+             console.log("updateGoogleSheet returned false.");
+             // Decide if you want to keep the modal open or close it on failure
+             // hidePhotoModal(); // Example: Close modal on failure too
         }
 
     } catch (error) {
-        console.error('Error during check-in confirmation:', error);
-        showNotification('Có lỗi xảy ra trong quá trình xác nhận check-in.', 'error');
+        // This catch block is unlikely to be hit if updateGoogleSheet handles its own errors,
+        // but good practice to have it.
+        console.error('Unexpected error during check-in confirmation flow:', error);
+        showNotification('Có lỗi không mong muốn xảy ra trong quá trình xác nhận.', 'error');
         modalConfirmBtn.disabled = false;
         modalConfirmBtn.innerHTML = '<i class="fas fa-check"></i> Xác nhận Check-in';
+        // Decide if you want to keep the modal open or close it on failure
+        // hidePhotoModal();
     }
-    // Note: The modal might close automatically or stay open depending on success and queue status
+    // Note: Modal closure is now handled inside the success/failure logic and queue check.
 }
 
+
+/**
+ * Updates the Google Sheet via the Web App URL.
+ * @param {string} id Athlete ID.
+ * @param {string} photoDataUrl Base64 encoded image data URL.
+ * @returns {Promise<boolean>} True if update was successful, false otherwise.
+ */
+async function updateGoogleSheet(id, photoDataUrl) {
+    const now = new Date();
+    const timeString = formatDate(now);
+
+    const postData = {
+        id: id,
+        time: timeString,
+        photoUrl: photoDataUrl // Send photo data in the request body
+    };
+
+    console.log(`Attempting to update Sheet via POST to: ${WEBAPP_URL} for ID: ${id}`);
+    console.log(`Data size (photoUrl length): ${photoDataUrl.length}`); // Log size, large URLs can cause issues
+
+    // Check URL validity roughly
+    if (!WEBAPP_URL || !WEBAPP_URL.startsWith('https://script.google.com/macros/s/')) {
+         console.error("Invalid WEBAPP_URL:", WEBAPP_URL);
+         showNotification('URL cập nhật Google Sheet không hợp lệ.', 'error');
+         return false; // Prevent fetch with bad URL
+    }
+
+    try {
+        const response = await fetch(WEBAPP_URL, {
+            method: 'POST',
+            mode: 'cors', // Keep cors
+            cache: 'no-cache',
+            headers: {
+                 // IMPORTANT: Your Apps Script doPost(e) MUST be able to parse this.
+                 // Common issue: Sending JSON but Apps Script expecting form data or vice versa.
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(postData), // Send data as JSON string
+             redirect: 'follow' // Handle redirects if Apps Script URL changes
+        });
+
+        console.log(`Fetch response status: ${response.status}`);
+
+        // Check if the response is OK (status 200-299)
+        if (!response.ok) {
+            // Try to get more detailed error message from response body
+            let errorMsg = `Lỗi Server: ${response.status} ${response.statusText}`;
+            try {
+                // Check content type before assuming JSON
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    const errorData = await response.json();
+                    errorMsg = errorData.error || errorData.message || JSON.stringify(errorData); // Provide more context from JSON error
+                    console.error('Server returned JSON error:', errorData);
+                } else {
+                    const textError = await response.text(); // Get text error if not JSON
+                    errorMsg = textError || errorMsg; // Use text error if available
+                    console.error('Server returned non-JSON error:', textError);
+                 }
+            } catch (e) {
+                 console.error("Could not parse error response body:", e);
+                 // Use the basic HTTP error if parsing fails
+            }
+            // Throw the detailed error to be caught below
+            throw new Error(errorMsg);
+        }
+
+        // Assuming the Web App returns JSON with a success status like { success: true } or { result: "success" }
+        const data = await response.json();
+        console.log('Received response data from Web App:', data);
+
+        // Adjust this condition based on the *actual* success response from your Apps Script
+        if (data.success === true || data.result === "success") {
+            console.log(`Sheet update successful for ID: ${id}`);
+            return true; // Indicate success
+        } else {
+            // Handle cases where the script ran but indicated failure
+            const failureMsg = data.error || data.message || 'Apps Script báo cáo lỗi không xác định.';
+            console.error('Sheet update failed logically:', failureMsg);
+            showNotification(`Lỗi cập nhật Google Sheet: ${failureMsg}`, 'error');
+            return false; // Indicate failure
+        }
+    } catch (error) {
+        // This catches network errors (fetch itself failed) OR errors thrown from !response.ok block
+        console.error('Error sending update to Google Sheet:', error);
+        // Provide a more user-friendly message for common network issues
+        let displayError = error.message;
+        if (error instanceof TypeError && error.message.includes('Failed to fetch')) { // Common network error
+             displayError = 'Lỗi kết nối mạng hoặc không thể truy cập URL cập nhật. Kiểm tra mạng và cấu hình CORS/URL.';
+        } else if (error.message.includes('Server returned non-JSON error:')) { // Specific non-JSON error
+             displayError = `Server Web App trả về lỗi không đúng định dạng: ${error.message.split(':').slice(1).join(':').trim()}`;
+        } else if (error.message.includes('Lỗi Server:')) { // Specific HTTP error
+            displayError = `Yêu cầu cập nhật thất bại: ${error.message}`;
+        }
+        // Default error for other cases
+        showNotification(displayError || 'Lỗi không xác định khi gửi cập nhật.', 'error');
+        return false; // Indicate failure
+    }
+}
+
+
+// ... (Rest of the script.js: QR Code, Export, GitHub, Selection, Event Listeners, Initialization) ...
 
 /**
  * Updates the Google Sheet via the Web App URL.
