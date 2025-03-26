@@ -116,7 +116,7 @@ function showPhotoModal(id) {
         })
         .catch(error => {
             console.error('Error accessing camera:', error);
-            alert('Không thể truy cập camera.');
+            alert('Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập.');
             modal.style.display = 'none';
         });
 
@@ -193,7 +193,6 @@ async function updateGoogleSheet(id, photoUrl) {
         showNotification('Lỗi khi cập nhật Google Sheet', 'error');
     }
 }
-
 // Format date in a user-friendly format
 function formatDate(date) {
     const day = String(date.getDate()).padStart(2, '0');
