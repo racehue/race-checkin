@@ -39,13 +39,20 @@ header {
     color: white;
 }
 
-#refresh-btn {
+#refresh-btn, #checkin-btn {
     background: #FF9800;
     color: white;
     padding: 10px 15px;
     border: none;
     border-radius: 20px;
     cursor: pointer;
+    font-size: 16px;
+    transition: transform 0.3s, background 0.3s;
+}
+
+#refresh-btn:hover, #checkin-btn:hover {
+    background: #e68a00;
+    transform: scale(1.05);
 }
 
 .search-container {
