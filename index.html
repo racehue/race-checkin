@@ -3,55 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>THANH KHÊ OPEN 2025</title>
+    <title>THANH KHÊ OPEN 2025 - Check-in</title>
+    <!-- Favicon (Optional: Add a favicon for better branding) -->
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <!-- Font Awesome CSS (Load CSS for faster icon rendering) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <!-- Custom Stylesheet -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <header>
         <h1>THANH KHÊ OPEN 2025</h1>
+        <p>Hệ thống Check-in Vận động viên</p>
     </header>
-    <div class="filters">
-        <div class="filter-group">
-            <p>Chọn cự ly:</p>
-            <div class="button-group">
-                <button class="filter-btn active" data-filter="all">All</button>
-                <button class="filter-btn" data-filter="5KM">5KM</button>
-                <button class="filter-btn" data-filter="10KM">10KM</button>
+
+    <main>
+        <div class="controls-container">
+            <nav class="filters" aria-label="Bộ lọc vận động viên">
+                <div class="filter-group">
+                    <label for="distance-filter">Cự ly:</label>
+                    <div class="button-group" id="distance-filter">
+                        <button class="filter-btn active" data-filter="all" aria-pressed="true">Tất cả</button>
+                        <button class="filter-btn" data-filter="5KM" aria-pressed="false">5KM</button>
+                        <button class="filter-btn" data-filter="10KM" aria-pressed="false">10KM</button>
+                        <!-- Add more distances as needed -->
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label for="gender-filter">Giới tính:</label>
+                    <div class="button-group" id="gender-filter">
+                        <button class="filter-btn active" data-gender="all" aria-pressed="true">Tất cả</button>
+                        <button class="filter-btn" data-gender="Nam" aria-pressed="false">Nam</button>
+                        <button class="filter-btn" data-gender="Nữ" aria-pressed="false">Nữ</button>
+                    </div>
+                </div>
+                <button id="refresh-btn" title="Tải lại danh sách VĐV"><i class="fas fa-sync"></i> Tải lại</button>
+            </nav>
+
+            <div class="search-container">
+                <div class="search-wrapper">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="search" id="search-input" placeholder="Tìm tên hoặc BIB..." aria-label="Tìm kiếm vận động viên">
+                </div>
+                <button id="qr-scan-btn" title="Quét mã QR để check-in"><i class="fas fa-qrcode"></i> Quét QR</button>
+                <span id="results-count" aria-live="polite">[0/0]</span>
             </div>
         </div>
-        <div class="filter-group">
-            <p>Chọn giới tính:</p>
-            <div class="button-group">
-                <button class="filter-btn active" data-gender="all">All</button>
-                <button class="filter-btn" data-gender="Nam">Nam</button>
-                <button class="filter-btn" data-gender="Nữ">Nữ</button>
-            </div>
+
+        <div id="loader" class="loader" style="display: none;">
+            <div class="spinner"></div>
+            <p>Đang tải dữ liệu...</p>
         </div>
-        <button id="refresh-btn"><i class="fas fa-sync"></i> Refresh</button>
-    </div>
-    <div class="search-container">
-        <input type="text" id="search-input" placeholder="Tìm tên/ bib">
-        <span id="results-count">[0/0]</span>
-        <button id="qr-scan-btn"><i class="fas fa-qrcode"></i> Quét QR</button>
-    </div>
-    <div id="athletes-list"></div>
-    <div class="action-buttons">
-        <button id="checkin-btn"><i class="fas fa-check-circle"></i> Check in</button>
-        <button id="export-btn"><i class="fas fa-download"></i> Xuất JSON</button>
-        <button id="commit-btn"><i class="fas fa-cloud-upload-alt"></i> Đẩy lên GitHub</button>
-    </div>
+
+        <section id="athletes-list-container" aria-live="polite">
+            <div id="athletes-list" class="athletes-grid">
+                <!-- Athlete cards will be rendered here by JavaScript -->
+            </div>
+            <p id="no-results" class="no-results-message" style="display: none;">Không tìm thấy vận động viên nào phù hợp.</p>
+        </section>
+
+
+        <div class="action-buttons">
+             <!-- Removed Check-in button from here - check-in happens via card click/QR scan -->
+            <button id="export-btn" title="Xuất dữ liệu đã check-in ra file JSON"><i class="fas fa-download"></i> Xuất JSON</button>
+            <button id="commit-btn" title="Đẩy dữ liệu lên GitHub (Yêu cầu cấu hình Token)"><i class="fas fa-cloud-upload-alt"></i> Đẩy lên GitHub</button>
+            <button id="checkin-selected-btn" title="Check-in các VĐV đã chọn"><i class="fas fa-check-circle"></i> Check-in Đã chọn</button>
+        </div>
+    </main>
+
     <!-- Modal for capturing photo -->
-    <div id="photo-modal" class="modal">
+    <div id="photo-modal" class="modal" aria-hidden="true" role="dialog" aria-labelledby="modal-title">
         <div class="modal-content">
-            <span class="close-btn">&times;</span>
-            <h2>Chụp ảnh check-in</h2>
-            <video id="camera" autoplay playsinline></video>
-            <canvas id="canvas" style="display: none;"></canvas>
-            <button id="capture-btn">Chụp ảnh</button>
-            <button id="confirm-btn" style="display: none;">Xác nhận</button>
+            <button class="close-btn" aria-label="Đóng">×</button>
+            <h2 id="modal-title">Chụp ảnh check-in cho VĐV</h2>
+            <div class="camera-container">
+                <video id="camera-video" autoplay playsinline aria-label="Camera preview"></video>
+                <canvas id="canvas" style="display: none;"></canvas>
+            </div>
+            <div class="modal-actions">
+                 <p id="modal-athlete-info" class="modal-athlete-info"></p>
+                <button id="capture-btn"><i class="fas fa-camera"></i> Chụp ảnh</button>
+                <button id="retake-btn" style="display: none;"><i class="fas fa-redo"></i> Chụp lại</button>
+                <button id="confirm-btn" style="display: none;"><i class="fas fa-check"></i> Xác nhận Check-in</button>
+                <button id="cancel-modal-btn"><i class="fas fa-times"></i> Hủy</button>
+            </div>
+            <div id="camera-error" class="error-message" style="display: none;">Không thể truy cập camera. Vui lòng cấp quyền và thử lại.</div>
         </div>
     </div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/js/all.min.js"></script>
-    <script src="script.js"></script>
+
+    <!-- Notification Area -->
+    <div id="notification-area"></div>
+
+    <!-- QR Code Scanner Library -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <!-- Custom JavaScript -->
+    <script src="script.js" defer></script>
 </body>
 </html>
