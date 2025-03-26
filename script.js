@@ -532,33 +532,141 @@ function retakePhoto() {
  * Confirms the captured photo and proceeds with the check-in update.
  */
 async function confirmCheckIn() {
-    // Double-check required elements and state
+    // 1. Kiểm tra trạng thái ban đầu
+    console.log("--- confirmCheckIn START ---");
     if (!currentModalAthlete || !modalCanvas || modalCanvas.style.display === 'none') {
-        console.error("ConfirmCheckIn called in invalid state.", { currentModalAthlete, modalCanvasExists: !!modalCanvas, canvasVisible: modalCanvas?.style.display !== 'none' });
-        showNotification("Không có ảnh để xác nhận hoặc VĐV không hợp lệ.", "error");
+        console.error("confirmCheckIn aborted: Invalid state.", {
+            hasAthlete: !!currentModalAthlete,
+            hasCanvas: !!modalCanvas,
+            isCanvasVisible: modalCanvas?.style.display !== 'none'
+        });
+        showNotification("Trạng thái không hợp lệ để xác nhận.", "error");
         return;
     }
 
-    modalConfirmBtn.disabled = true; // Prevent double clicks
+    // 2. Vô hiệu hóa nút, hiển thị loading
+    modalConfirmBtn.disabled = true;
     modalConfirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
-    console.log(`Confirming check-in for athlete ID: ${currentModalAthlete.id}`);
+    console.log(`Processing check-in for Athlete ID: ${currentModalAthlete.id}, Name: ${currentModalAthlete.name}`);
+
+    // --- Cờ Debug ---
+    // Đặt thành true để gửi ảnh giả (nhỏ) thay vì ảnh thật
+    // Giúp kiểm tra xem lỗi có phải do kích thước ảnh hay không
+    const USE_DUMMY_PHOTO_FOR_TESTING = false;
+    // -----------------
 
     let photoDataUrl = '';
+
+    // 3. Lấy dữ liệu ảnh từ Canvas
     try {
-        // Get image data (use JPEG for smaller size, adjust quality 0.0-1.0)
-        photoDataUrl = modalCanvas.toDataURL('image/jpeg', 0.85); // Quality 0.85
-        console.log(`Generated photo Data URL (length: ${photoDataUrl.length})`);
-        if (!photoDataUrl || photoDataUrl === 'data:,') {
-             throw new Error("Canvas toDataURL returned empty or invalid data.");
+        console.log("STEP 1: Getting image data from canvas...");
+        if (USE_DUMMY_PHOTO_FOR_TESTING) {
+            photoDataUrl = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="; // Ảnh 1x1 pixel
+            console.log("Using DUMMY photo data.");
+        } else {
+            // Thử giảm chất lượng một chút nữa nếu nghi ngờ kích thước
+            photoDataUrl = modalCanvas.toDataURL('image/jpeg', 0.75); // Chất lượng 75%
+            console.log(`Generated REAL photo Data URL. Length: ${photoDataUrl.length}`);
+
+            if (!photoDataUrl || photoDataUrl === 'data:,') {
+                throw new Error("canvas.toDataURL returned empty or invalid data.");
+            }
+
+            // Cảnh báo nếu ảnh quá lớn (ví dụ > 1.5MB)
+            if (photoDataUrl.length > 1.5 * 1024 * 1024) {
+                console.warn(`Photo data URL is large (${(photoDataUrl.length / 1024 / 1024).toFixed(2)} MB). This might cause issues.`);
+                showNotification("Ảnh có dung lượng lớn, đang xử lý...", "info", 3000);
+            }
         }
+        console.log("STEP 1 SUCCESS.");
 
     } catch (error) {
-        console.error('Error getting photo data from canvas:', error);
+        console.error("STEP 1 FAILED: Error getting photo data from canvas:", error);
         showNotification('Lỗi xử lý ảnh chụp. Không thể tiếp tục.', 'error');
-        modalConfirmBtn.disabled = false; // Re-enable button
+        modalConfirmBtn.disabled = false; // Bật lại nút
         modalConfirmBtn.innerHTML = '<i class="fas fa-check"></i> Xác nhận Check-in';
-        return; // Stop the process
+        console.log("--- confirmCheckIn END (Error Step 1) ---");
+        return; // Dừng lại
     }
+
+    // 4. Gọi hàm cập nhật Google Sheet
+    try {
+        console.log("STEP 2: Calling updateGoogleSheet...");
+        const success = await updateGoogleSheet(currentModalAthlete.id, photoDataUrl);
+        console.log(`STEP 2 COMPLETE. updateGoogleSheet returned: ${success}`);
+
+        // 5. Xử lý kết quả từ updateGoogleSheet
+        if (success) {
+            console.log("STEP 3: Processing SUCCESS path (updateGoogleSheet returned true)...");
+            // --- Cập nhật Local Data ---
+            try {
+                const athleteIndex = athletes.findIndex(a => a.id === currentModalAthlete.id);
+                if (athleteIndex > -1) {
+                    athletes[athleteIndex].checkedIn = true;
+                    athletes[athleteIndex].checkinTime = formatDate(new Date());
+                    // Chỉ cập nhật ảnh local nếu không dùng ảnh giả
+                    if (!USE_DUMMY_PHOTO_FOR_TESTING) {
+                         // Lưu tạm ảnh base64 để hiển thị ngay, GSheet là nguồn chính
+                         athletes[athleteIndex].photoUrl = photoDataUrl;
+                    }
+                    console.log(`Local data updated for ID: ${currentModalAthlete.id}`);
+                } else {
+                    console.warn(`Local data update skipped: Athlete ID ${currentModalAthlete.id} not found in local array.`);
+                }
+            } catch (localError) {
+                 console.error("Error updating local athlete data:", localError);
+                 // Vẫn tiếp tục xử lý UI dù local update lỗi
+            }
+            // --- Cập nhật UI ---
+            showNotification(`VĐV ${currentModalAthlete.name} (BIB: ${currentModalAthlete.bib}) đã check-in!`, 'success');
+            deselectAthlete(currentModalAthlete.id); // Bỏ chọn VĐV vừa check-in
+            applyFilters(); // Render lại danh sách
+
+            // --- Xử lý hàng đợi (nếu có) ---
+            const remainingSelected = Array.from(selectedAthleteIds)
+                                          .map(id => athletes.find(a => a.id === id))
+                                          .filter(a => a && !a.checkedIn);
+
+            if (remainingSelected.length > 0) {
+                console.log(`Queue: Found ${remainingSelected.length} more selected athletes. Processing next: ${remainingSelected[0].id}`);
+                setTimeout(() => {
+                    console.log("Queue: Hiding current modal before showing next.");
+                    hidePhotoModal(); // Đóng modal hiện tại
+                    setTimeout(() => { // Đợi một chút rồi mở modal mới
+                        console.log("Queue: Showing modal for next athlete.");
+                        checkInAthlete(remainingSelected[0].id);
+                    }, 150); // Tăng nhẹ delay
+                }, 800); // Delay sau thông báo success
+            } else {
+                console.log("Queue: No more selected athletes.");
+                hidePhotoModal(); // Đóng modal nếu không còn VĐV trong hàng đợi
+            }
+            console.log("STEP 3 SUCCESS COMPLETE.");
+
+        } else { // updateGoogleSheet trả về false
+            console.log("STEP 4: Processing FAILURE path (updateGoogleSheet returned false).");
+            // Lỗi đã được hiển thị bởi updateGoogleSheet
+            modalConfirmBtn.disabled = false; // Bật lại nút để thử lại
+            modalConfirmBtn.innerHTML = '<i class="fas fa-check"></i> Xác nhận Check-in';
+            // Giữ modal mở để người dùng có thể thử lại hoặc hủy
+            console.log("Modal kept open for retry.");
+            console.log("--- confirmCheckIn END (Failure Step 4) ---");
+            // Không return ở đây, chỉ dừng logic success path
+        }
+
+    } catch (error) { // Lỗi không mong muốn xảy ra trong khối try này (hiếm gặp nếu updateGoogleSheet xử lý lỗi tốt)
+        console.error("STEP 5: Caught UNEXPECTED error during updateGoogleSheet call or success/failure processing:", error);
+        showNotification('Lỗi không mong muốn khi gửi yêu cầu cập nhật.', 'error');
+        modalConfirmBtn.disabled = false; // Bật lại nút
+        modalConfirmBtn.innerHTML = '<i class="fas fa-check"></i> Xác nhận Check-in';
+        console.log("--- confirmCheckIn END (Error Step 5) ---");
+    }
+    // Log cuối cùng sẽ bị thiếu nếu hàm kết thúc sớm do lỗi hoặc return
+    // console.log("--- confirmCheckIn Reached End ---"); // Có thể không cần thiết
+}
+
+
+// Hàm updateGoogleSheet giữ nguyên như phiên bản trước với đầy đủ log lỗi và xử lý response.
 
     // --- Now attempt to update Google Sheet ---
     try {
