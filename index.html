@@ -4,99 +4,166 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>THANH KHÊ OPEN 2025 - Check-in</title>
-    <!-- Favicon (Optional: Add a favicon for better branding) -->
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <!-- Font Awesome CSS (Load CSS for faster icon rendering) -->
+    <!-- Favicon -->
+    <link rel="icon" href="favicon.ico" type="image/x-icon"> <!-- Thay 'favicon.ico' bằng đường dẫn thực tế -->
+
+    <!-- Font Awesome CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
     <!-- Custom Stylesheet -->
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css"> <!-- Đảm bảo file CSS được link đúng -->
+
+    <!-- Preconnect hints for performance (Tùy chọn, nếu biết trước các domain khác sẽ kết nối) -->
+    <!-- <link rel="preconnect" href="https://script.google.com"> -->
+    <!-- <link rel="preconnect" href="https://cdnjs.cloudflare.com"> -->
+
 </head>
 <body>
-    <header>
+    <!-- Header chính của trang -->
+    <header class="page-header">
         <h1>THANH KHÊ OPEN 2025</h1>
         <p>Hệ thống Check-in Vận động viên</p>
     </header>
 
-    <main>
-        <div class="controls-container">
+    <!-- Nội dung chính -->
+    <main class="main-content">
+
+        <!-- Khu vực điều khiển: Bộ lọc và Tìm kiếm -->
+        <section class="controls-container" aria-labelledby="controls-heading">
+            <h2 id="controls-heading" class="visually-hidden">Bộ điều khiển danh sách</h2> <!-- Tiêu đề ẩn cho trình đọc màn hình -->
+
+            <!-- Bộ lọc -->
             <nav class="filters" aria-label="Bộ lọc vận động viên">
                 <div class="filter-group">
-                    <label for="distance-filter">Cự ly:</label>
-                    <div class="button-group" id="distance-filter">
-                        <button class="filter-btn active" data-filter="all" aria-pressed="true">Tất cả</button>
-                        <button class="filter-btn" data-filter="5KM" aria-pressed="false">5KM</button>
-                        <button class="filter-btn" data-filter="10KM" aria-pressed="false">10KM</button>
-                        <!-- Add more distances as needed -->
+                    <h3 class="filter-group-heading">Cự ly:</h3> <!-- Dùng heading thay vì label -->
+                    <div class="button-group" id="distance-filter" role="group" aria-label="Lọc theo cự ly">
+                        <button type="button" class="filter-btn active" data-filter="all" aria-pressed="true">Tất cả</button>
+                        <button type="button" class="filter-btn" data-filter="5KM" aria-pressed="false">5KM</button>
+                        <button type="button" class="filter-btn" data-filter="10KM" aria-pressed="false">10KM</button>
+                        <!-- Thêm các cự ly khác nếu cần -->
                     </div>
                 </div>
                 <div class="filter-group">
-                    <label for="gender-filter">Giới tính:</label>
-                    <div class="button-group" id="gender-filter">
-                        <button class="filter-btn active" data-gender="all" aria-pressed="true">Tất cả</button>
-                        <button class="filter-btn" data-gender="Nam" aria-pressed="false">Nam</button>
-                        <button class="filter-btn" data-gender="Nữ" aria-pressed="false">Nữ</button>
+                    <h3 class="filter-group-heading">Giới tính:</h3> <!-- Dùng heading -->
+                    <div class="button-group" id="gender-filter" role="group" aria-label="Lọc theo giới tính">
+                        <button type="button" class="filter-btn active" data-gender="all" aria-pressed="true">Tất cả</button>
+                        <button type="button" class="filter-btn" data-gender="Nam" aria-pressed="false">Nam</button>
+                        <button type="button" class="filter-btn" data-gender="Nữ" aria-pressed="false">Nữ</button>
                     </div>
                 </div>
-                <button id="refresh-btn" title="Tải lại danh sách VĐV"><i class="fas fa-sync"></i> Tải lại</button>
+                 <!-- Nút tải lại nằm trong khu vực điều khiển chung -->
+                <button type="button" id="refresh-btn" class="control-button" aria-label="Tải lại danh sách vận động viên">
+                    <i class="fas fa-sync-alt" aria-hidden="true"></i> Tải lại
+                </button>
             </nav>
 
-            <div class="search-container">
-                <div class="search-wrapper">
-                    <i class="fas fa-search search-icon"></i>
-                    <input type="search" id="search-input" placeholder="Tìm tên hoặc BIB..." aria-label="Tìm kiếm vận động viên">
+            <!-- Tìm kiếm và Quét QR -->
+            <div class="search-actions">
+                <div class="search-container">
+                    <label for="search-input" class="visually-hidden">Tìm kiếm vận động viên</label> <!-- Label ẩn -->
+                    <div class="search-wrapper">
+                        <i class="fas fa-search search-icon" aria-hidden="true"></i>
+                        <input type="search" id="search-input" placeholder="Tìm tên hoặc BIB...">
+                    </div>
+                     <span id="results-count" class="results-counter" aria-live="polite" aria-atomic="true">[0/0]</span> <!-- aria-atomic để đọc toàn bộ khi thay đổi -->
                 </div>
-                <button id="qr-scan-btn" title="Quét mã QR để check-in"><i class="fas fa-qrcode"></i> Quét QR</button>
-                <span id="results-count" aria-live="polite">[0/0]</span>
+                <button type="button" id="qr-scan-btn" class="control-button" aria-label="Quét mã QR để tìm và check-in">
+                    <i class="fas fa-qrcode" aria-hidden="true"></i> Quét QR
+                </button>
             </div>
-        </div>
-
-        <div id="loader" class="loader" style="display: none;">
-            <div class="spinner"></div>
-            <p>Đang tải dữ liệu...</p>
-        </div>
-
-        <section id="athletes-list-container" aria-live="polite">
-            <div id="athletes-list" class="athletes-grid">
-                <!-- Athlete cards will be rendered here by JavaScript -->
-            </div>
-            <p id="no-results" class="no-results-message" style="display: none;">Không tìm thấy vận động viên nào phù hợp.</p>
         </section>
 
+        <!-- Khu vực hiển thị danh sách VĐV -->
+        <section id="athletes-display-area" aria-labelledby="athletes-list-heading">
+            <h2 id="athletes-list-heading" class="visually-hidden">Danh sách vận động viên</h2> <!-- Tiêu đề ẩn -->
 
-        <div class="action-buttons">
-             <!-- Removed Check-in button from here - check-in happens via card click/QR scan -->
-            <button id="export-btn" title="Xuất dữ liệu đã check-in ra file JSON"><i class="fas fa-download"></i> Xuất JSON</button>
-            <button id="commit-btn" title="Đẩy dữ liệu lên GitHub (Yêu cầu cấu hình Token)"><i class="fas fa-cloud-upload-alt"></i> Đẩy lên GitHub</button>
-            <button id="checkin-selected-btn" title="Check-in các VĐV đã chọn"><i class="fas fa-check-circle"></i> Check-in Đã chọn</button>
-        </div>
+             <!-- Chỉ báo tải -->
+            <div id="loader" class="loader" role="status" aria-live="assertive" style="display: none;">
+                <div class="spinner" aria-hidden="true"></div>
+                <p>Đang tải dữ liệu...</p>
+            </div>
+
+            <!-- Container cho danh sách hoặc thông báo -->
+            <div id="athletes-list-content">
+                <!-- Danh sách VĐV (grid) -->
+                <div id="athletes-list" class="athletes-grid">
+                    <!-- Các thẻ vận động viên sẽ được JS chèn vào đây -->
+                    <!-- Ví dụ cấu trúc thẻ VĐV (do JS tạo ra):
+                    <div class="athlete-card checked-in selected" data-id="123" role="button" tabindex="0" aria-label="Vận động viên Nguyễn Văn A, BIB 1001" aria-pressed="true">
+                        <figure class="athlete-photo">
+                            <img src="..." alt="Ảnh VĐV Nguyễn Văn A" loading="lazy" onerror="...">
+                        </figure>
+                        <div class="athlete-info">
+                            <div class="athlete-name">Nguyễn Văn A</div>
+                            ...
+                        </div>
+                    </div>
+                    -->
+                </div>
+                <!-- Thông báo khi không có kết quả -->
+                <p id="no-results" class="no-results-message" role="alert" style="display: none;">Không tìm thấy vận động viên nào phù hợp.</p>
+            </div>
+        </section>
+
+        <!-- Khu vực các nút hành động chung -->
+        <aside class="global-actions" aria-label="Hành động chung">
+             <button type="button" id="checkin-selected-btn" class="action-button" aria-label="Check-in tất cả vận động viên đã chọn" disabled>
+                <i class="fas fa-check-circle" aria-hidden="true"></i> Check-in Đã chọn
+            </button>
+            <button type="button" id="export-btn" class="action-button" aria-label="Xuất danh sách vận động viên đã check-in (trong bộ lọc hiện tại) ra file JSON">
+                <i class="fas fa-download" aria-hidden="true"></i> Xuất JSON
+            </button>
+            <button type="button" id="commit-btn" class="action-button" aria-label="Đồng bộ và đẩy toàn bộ dữ liệu lên GitHub">
+                <i class="fas fa-cloud-upload-alt" aria-hidden="true"></i> Đẩy lên GitHub
+            </button>
+        </aside>
     </main>
 
-    <!-- Modal for capturing photo -->
-    <div id="photo-modal" class="modal" aria-hidden="true" role="dialog" aria-labelledby="modal-title">
+    <!-- Modal Chụp ảnh Check-in -->
+    <div id="photo-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-hidden="true">
         <div class="modal-content">
-            <button class="close-btn" aria-label="Đóng">×</button>
-            <h2 id="modal-title">Chụp ảnh check-in cho VĐV</h2>
-            <div class="camera-container">
-                <video id="camera-video" autoplay playsinline aria-label="Camera preview"></video>
-                <canvas id="canvas" style="display: none;"></canvas>
+            <button type="button" class="close-btn" aria-label="Đóng cửa sổ chụp ảnh">×</button>
+            <h2 id="modal-title" class="modal-heading">Chụp ảnh check-in</h2>
+            <p id="modal-athlete-info" class="modal-athlete-description"></p> <!-- Thông tin VĐV -->
+
+            <div class="camera-area">
+                 <div id="camera-error" class="error-message" role="alert" style="display: none;"></div>
+                <div class="camera-feed">
+                    <video id="camera-video" autoplay playsinline aria-label="Khung xem camera"></video>
+                    <canvas id="canvas" aria-label="Ảnh đã chụp" style="display: none;"></canvas>
+                </div>
             </div>
+
             <div class="modal-actions">
-                 <p id="modal-athlete-info" class="modal-athlete-info"></p>
-                <button id="capture-btn"><i class="fas fa-camera"></i> Chụp ảnh</button>
-                <button id="retake-btn" style="display: none;"><i class="fas fa-redo"></i> Chụp lại</button>
-                <button id="confirm-btn" style="display: none;"><i class="fas fa-check"></i> Xác nhận Check-in</button>
-                <button id="cancel-modal-btn"><i class="fas fa-times"></i> Hủy</button>
+                <!-- Các nút điều khiển camera và xác nhận -->
+                <button type="button" id="capture-btn" class="modal-button primary" aria-label="Chụp ảnh từ camera">
+                    <i class="fas fa-camera" aria-hidden="true"></i> Chụp ảnh
+                </button>
+                <button type="button" id="retake-btn" class="modal-button secondary" style="display: none;" aria-label="Chụp lại ảnh khác">
+                    <i class="fas fa-redo" aria-hidden="true"></i> Chụp lại
+                </button>
+                <button type="button" id="confirm-btn" class="modal-button success" style="display: none;" aria-label="Xác nhận ảnh và hoàn tất check-in">
+                    <i class="fas fa-check" aria-hidden="true"></i> Xác nhận Check-in
+                </button>
+                <button type="button" id="cancel-modal-btn" class="modal-button danger" aria-label="Hủy bỏ thao tác check-in">
+                    <i class="fas fa-times" aria-hidden="true"></i> Hủy
+                </button>
             </div>
-            <div id="camera-error" class="error-message" style="display: none;">Không thể truy cập camera. Vui lòng cấp quyền và thử lại.</div>
         </div>
     </div>
 
-    <!-- Notification Area -->
-    <div id="notification-area"></div>
+    <!-- Khu vực hiển thị thông báo nhanh (Notifications/Toasts) -->
+    <div id="notification-area" role="log" aria-live="assertive" aria-relevant="additions">
+        <!-- Thông báo sẽ được JS thêm vào đây -->
+        <!-- Ví dụ:
+        <div class="notification success" role="status">Check-in thành công!</div>
+        -->
+    </div>
 
-    <!-- QR Code Scanner Library -->
+    <!-- Thư viện quét QR Code (jsQR) -->
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
-    <!-- Custom JavaScript -->
+
+    <!-- File JavaScript tùy chỉnh (Tải sau cùng với defer) -->
     <script src="script.js" defer></script>
 </body>
 </html>
