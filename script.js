@@ -1,4 +1,4 @@
-// --- JavaScript (script.js - Hoàn thiện v3) ---
+// --- JavaScript (script.js - Hoàn thiện v3 - Giống bản trước) ---
 
 // --- Configuration ---
 // !!! QUAN TRỌNG: Thay thế bằng URL Web App thực tế của bạn sau khi triển khai Apps Script !!!
@@ -32,24 +32,21 @@ const checkinSelectedBtn = document.getElementById('checkin-selected-btn');
 const noResultsMessage = document.getElementById('no-results');
 const notificationArea = document.getElementById('notification-area');
 
-// Photo Modal Elements
+// Photo Modal Elements - Ensure these IDs match your HTML
 const photoModal = document.getElementById('photo-modal');
-const modalCloseBtn = photoModal.querySelector('.close-btn');
-const modalCancelBtn = photoModal.querySelector('#cancel-modal-btn');
-const modalVideo = photoModal.querySelector('#camera-video');
-const modalCanvas = photoModal.querySelector('#canvas');
-const modalCaptureBtn = photoModal.querySelector('#capture-btn');
-const modalRetakeBtn = photoModal.querySelector('#retake-btn');
-const modalConfirmBtn = photoModal.querySelector('#confirm-btn');
-const modalAthleteInfo = photoModal.querySelector('#modal-athlete-info');
-const modalCameraError = photoModal.querySelector('#camera-error');
-
+const modalCloseBtn = photoModal?.querySelector('.close-btn'); // Added optional chaining
+const modalCancelBtn = photoModal?.querySelector('#cancel-modal-btn');
+const modalVideo = photoModal?.querySelector('#camera-video');
+const modalCanvas = photoModal?.querySelector('#canvas');
+const modalCaptureBtn = photoModal?.querySelector('#capture-btn');
+const modalRetakeBtn = photoModal?.querySelector('#retake-btn');
+const modalConfirmBtn = photoModal?.querySelector('#confirm-btn');
+const modalAthleteInfo = photoModal?.querySelector('#modal-athlete-info');
+const modalCameraError = photoModal?.querySelector('#camera-error');
 
 // --- Utility Functions ---
 
-/**
- * Debounce function to limit the rate at which a function can fire.
- */
+/** Debounce function */
 function debounce(func, delay) {
     let timeoutId;
     return function(...args) {
@@ -59,21 +56,19 @@ function debounce(func, delay) {
         }, delay);
     };
 }
-
-/** Shows the loading indicator. */
+/** Shows loader */
 function showLoader() {
     if (loader) loader.style.display = 'block';
+    // Hide list/no-results message while loading
     if (athletesListContainer) athletesListContainer.style.display = 'none';
     if (noResultsMessage) noResultsMessage.style.display = 'none';
 }
-
-/** Hides the loading indicator. */
+/** Hides loader */
 function hideLoader() {
     if (loader) loader.style.display = 'none';
-    // Don't force display grid here, renderAthletes will handle it
+    // Don't force display here, let renderAthletes handle visibility
 }
-
-/** Formats a Date object into "DD/MM/YYYY HH:MM". */
+/** Formats Date */
 function formatDate(date) {
     if (!date || !(date instanceof Date)) return '';
     const day = String(date.getDate()).padStart(2, '0');
@@ -83,158 +78,179 @@ function formatDate(date) {
     const minutes = String(date.getMinutes()).padStart(2, '0');
     return `${day}/${month}/${year} ${hours}:${minutes}`;
 }
-
-/** Shows a notification message. */
+/** Shows notification */
 function showNotification(message, type = 'info', duration = 4000) {
-    if (!notificationArea) return;
+    if (!notificationArea) {
+        console.warn("Notification area not found.");
+        return;
+    }
+    // Optional: Limit number of notifications displayed simultaneously
+    const MAX_NOTIFICATIONS = 5;
+    while (notificationArea.children.length >= MAX_NOTIFICATIONS) {
+        notificationArea.removeChild(notificationArea.firstChild);
+    }
+
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
     notification.textContent = message;
-    notification.style.animationDuration = '0.5s, 0.5s'; // In, Out
-    notification.style.animationDelay = `0s, ${duration / 1000 - 0.5}s`; // Delay fadeOut
+    notification.setAttribute('role', type === 'error' ? 'alert' : 'status'); // Role based on type
+    notification.style.animationDuration = '0.4s, 0.5s'; // Adjusted timings
+    notification.style.animationDelay = `0s, ${duration / 1000 - 0.5}s`;
     notificationArea.appendChild(notification);
     setTimeout(() => { notification.remove(); }, duration);
 }
 
+
 // --- Data Fetching and Processing ---
 
-/**
- * Fetches athlete data from the Google Apps Script Web App (doGet).
- */
+/** Fetches athlete data from the Apps Script Web App (doGet). */
 async function fetchAthletes() {
     if (isFetching) {
         console.log("Fetch already in progress. Skipping.");
-        showNotification("Đang tải dữ liệu...", "info", 1500);
+        // showNotification("Đang tải dữ liệu...", "info", 1500); // Avoid repetitive notifications
         return;
     }
     isFetching = true;
     showLoader();
-    refreshBtn.disabled = true;
-    refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang tải...';
-    console.log('Fetching athletes via Web App URL...');
+    if(refreshBtn) {
+        refreshBtn.disabled = true;
+        refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Đang tải...';
+    }
+    console.log('Fetching athletes via Web App URL:', WEBAPP_URL);
 
     try {
         if (!WEBAPP_URL || !WEBAPP_URL.startsWith('https://script.google.com/macros/s/')) {
              throw new Error("WebApp URL không hợp lệ. Vui lòng kiểm tra cấu hình `script.js`.");
         }
-        const response = await fetch(WEBAPP_URL); // Call Apps Script doGet
-        console.log(`Fetch response status: ${response.status}`);
+        const response = await fetch(WEBAPP_URL);
+        console.log(`Fetch response status: ${response.status} ${response.statusText}`);
 
-        const responseText = await response.text(); // Read response text first
+        const responseText = await response.text();
 
         if (!response.ok) {
-            let errorMsg = `Lỗi ${response.status} khi tải dữ liệu từ server.`;
+            let errorMsg = `Lỗi ${response.status} khi tải dữ liệu.`;
             try {
-                 const errData = JSON.parse(responseText); // Try parsing error JSON
-                 errorMsg = `Lỗi server: ${errData.error || responseText || response.statusText}`;
+                 const errData = JSON.parse(responseText);
+                 errorMsg = `Lỗi server (${response.status}): ${errData.error || responseText}`;
             } catch(e){
-                errorMsg = `Lỗi ${response.status}: ${responseText || response.statusText}`; // Use text if JSON parse fails
+                errorMsg = `Lỗi ${response.status}: ${responseText || response.statusText}`;
              }
+             console.error("Raw Error Response Text:", responseText);
             throw new Error(errorMsg);
         }
 
-        // If response is OK, parse JSON
         let jsonData;
         try {
              jsonData = JSON.parse(responseText);
         } catch (e) {
-             console.error("Failed to parse response JSON:", e);
-             console.error("Raw Response Text:", responseText); // Log raw text for debugging
-             throw new Error(`Dữ liệu trả về từ server không phải JSON hợp lệ.`);
+             console.error("Failed to parse successful response JSON:", e);
+             console.error("Raw Success Response Text:", responseText);
+             throw new Error(`Dữ liệu nhận được từ server không hợp lệ (JSON parse error).`);
         }
 
-        // Check for logical errors returned in JSON
-        if (jsonData.success === false && jsonData.error) {
+        if (jsonData.success === false && jsonData.error) { // Check for logical error JSON
+             console.error("Server returned logical error:", jsonData.error);
             throw new Error(jsonData.error);
         }
 
-        processDataFromWebApp(jsonData); // Process the valid JSON data
+        processDataFromWebApp(jsonData); // Process the valid data
 
         console.log(`Fetched ${athletes.length} athletes successfully.`);
-        // Only show success if data is actually loaded
         if (athletes.length > 0) {
-             showNotification('Danh sách VĐV đã được cập nhật.', 'success', 2000);
+             // showNotification('Danh sách VĐV đã được cập nhật.', 'success', 2000); // Success is implied by display
         } else {
-            console.log("Fetched data but the list is empty.");
-            showNotification('Danh sách VĐV trống hoặc không có dữ liệu hợp lệ.', 'info', 3000);
+            console.log("Fetched data but the list is empty or invalid.");
+            // No results message will be shown by renderAthletes
+            // showNotification('Danh sách VĐV trống hoặc không có dữ liệu.', 'info', 3000);
         }
 
     } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error('Error fetching data:', error); // Log the full error
         showNotification(`Lỗi khi tải dữ liệu: ${error.message}. Vui lòng thử lại.`, 'error', 6000);
-        athletes = []; // Clear data on error
+        athletes = [];
         filteredAthletes = [];
-        renderAthletes(); // Update UI to show empty state
+        renderAthletes(); // Show empty state
     } finally {
-        applyFilters(); // Apply filters (or show no results)
+        applyFilters(); // Ensure UI consistency
         hideLoader();
         isFetching = false;
-        refreshBtn.disabled = false;
-        refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Làm mới';
+         if(refreshBtn) {
+            refreshBtn.disabled = false;
+            refreshBtn.innerHTML = '<i class="fas fa-sync-alt" aria-hidden="true"></i> Làm mới';
+        }
     }
 }
 
-/**
- * Processes data received from the Apps Script Web App (doGet).
- * Expects an array of objects with lowercase keys.
- */
+/** Processes data received from the Apps Script doGet endpoint. */
 function processDataFromWebApp(jsonData) {
     if (!Array.isArray(jsonData)) {
         console.error("Invalid data format received (expected array):", jsonData);
         throw new Error("Dữ liệu nhận được từ server không hợp lệ.");
     }
-    athletes = jsonData.map((item, index) => {
-        // Basic validation and normalization
-        const id = String(item.id || '').trim();
-        const name = String(item.name || 'N/A').trim();
-        const bib = String(item.bib || 'N/A').trim();
+    // Map and filter in one step
+    athletes = jsonData
+        .map((item, index) => {
+            // Ensure item is an object
+            if (typeof item !== 'object' || item === null) {
+                 console.warn(`Skipping invalid item at index ${index}: Not an object.`);
+                 return null;
+            }
 
-        // Skip record if essential fields are missing
-        if (!id || name === 'N/A' || bib === 'N/A') {
-            console.warn(`Skipping invalid record at index ${index}:`, item);
-            return null; // Will be filtered out later
-        }
+            const id = String(item.id || '').trim();
+            const name = String(item.name || '').trim();
+            const bib = String(item.bib || '').trim();
 
-        return {
-            id: id,
-            name: name,
-            gender: String(item.gender || '').trim(),
-            distance: String(item.distance || '').trim().toUpperCase(),
-            bib: bib,
-            checkedIn: item.checkedin === true, // Ensure boolean
-            checkinTime: String(item.checkintime || '').trim(),
-            photoUrl: String(item.photourl || '').trim() // Drive URL or empty
-        };
-    }).filter(athlete => athlete !== null); // Remove null entries from invalid records
+            // Basic validation for required fields
+            if (!id || !name || !bib) {
+                console.warn(`Skipping record at index ${index} due to missing id, name, or bib:`, item);
+                return null;
+            }
+
+            return {
+                id: id,
+                name: name,
+                gender: String(item.gender || '').trim(),
+                distance: String(item.distance || '').trim().toUpperCase(),
+                bib: bib,
+                checkedIn: item.checkedin === true,
+                checkinTime: String(item.checkintime || '').trim(),
+                photoUrl: String(item.photourl || '').trim()
+            };
+        })
+        .filter(athlete => athlete !== null); // Remove nulls from invalid records
 }
 
 // --- UI Rendering and Filtering ---
 
-/** Renders the list of athletes based on `filteredAthletes`. */
+/** Renders the list of athletes. */
 function renderAthletes() {
-    if (!athletesListContainer) return;
+    if (!athletesListContainer) {
+        console.error("Athlete list container not found!");
+        return;
+    }
     athletesListContainer.innerHTML = ''; // Clear previous list
 
     if (filteredAthletes.length === 0) {
-        noResultsMessage.style.display = 'block';
-        athletesListContainer.style.display = 'none';
+        if (noResultsMessage) noResultsMessage.style.display = 'block';
+        athletesListContainer.style.display = 'none'; // Hide grid if empty
     } else {
-        noResultsMessage.style.display = 'none';
-        athletesListContainer.style.display = 'grid';
+        if (noResultsMessage) noResultsMessage.style.display = 'none';
+        athletesListContainer.style.display = 'grid'; // Show grid
         const fragment = document.createDocumentFragment();
         filteredAthletes.forEach(athlete => {
             const card = document.createElement('div');
             card.className = `athlete-card ${athlete.checkedIn ? 'checked-in' : ''} ${selectedAthleteIds.has(athlete.id) ? 'selected' : ''}`;
-            card.dataset.id = athlete.id;
+            card.dataset.id = athlete.id; // Use data attributes for ID
             card.setAttribute('role', 'button');
-            card.setAttribute('tabindex', '0');
-            card.setAttribute('aria-label', `Vận động viên ${athlete.name}, BIB ${athlete.bib}`);
+            card.setAttribute('tabindex', '0'); // Make focusable
+            card.setAttribute('aria-label', `Vận động viên ${athlete.name}, BIB ${athlete.bib}${athlete.checkedIn ? ', đã check-in' : ''}`);
             card.setAttribute('aria-pressed', selectedAthleteIds.has(athlete.id) ? 'true' : 'false');
 
-            const photoUrl = athlete.photoUrl || 'https://via.placeholder.com/80/EEEEEE/999999?text=No+Image'; // Placeholder with grey background
+            const photoUrl = athlete.photoUrl || 'https://via.placeholder.com/80/EEEEEE/999999?text=No+Image';
             const checkinStatusText = athlete.checkedIn ? 'Đã check-in' : 'Chưa check-in';
             const checkinStatusClass = athlete.checkedIn ? 'checked' : 'not-checked';
 
+            // Use template literals for cleaner HTML generation
             card.innerHTML = `
                 <div class="athlete-photo">
                     <img src="${photoUrl}" alt="Ảnh VĐV ${athlete.name}" loading="lazy" onerror="this.onerror=null; this.src='https://via.placeholder.com/80/FFCCCC/CC0000?text=Error'; this.alt='Lỗi tải ảnh';">
@@ -250,10 +266,10 @@ function renderAthletes() {
                     ${athlete.checkinTime ? `<div class="checkin-time">Lúc: ${athlete.checkinTime}</div>` : ''}
                 </div>
             `;
-            // Double-click listener for quick check-in
-            card.addEventListener('dblclick', () => {
+            // Add event listener directly here if needed, or rely on delegation
+             card.addEventListener('dblclick', () => {
                  if (!athlete.checkedIn) {
-                     console.log(`Double-clicked to check-in ${athlete.id}`);
+                     // console.log(`Double-clicked card for ${athlete.id}`);
                      checkInAthlete(athlete.id);
                  } else {
                      showNotification(`${athlete.name} đã check-in rồi.`, 'info');
@@ -263,46 +279,51 @@ function renderAthletes() {
         });
         athletesListContainer.appendChild(fragment);
     }
-    updateResultsCount(); // Update count and button states
+    updateResultsCount();
 }
 
-/** Updates the results count display and check-in button state. */
+/** Updates results count and button states. */
 function updateResultsCount() {
     if (resultsCountSpan) {
         resultsCountSpan.textContent = `[${filteredAthletes.length}/${athletes.length}]`;
     }
-    // Toggle checkin selected button based on selection
     const hasSelection = selectedAthleteIds.size > 0;
-    checkinSelectedBtn.disabled = !hasSelection;
-    checkinSelectedBtn.title = hasSelection
-        ? `Check-in ${selectedAthleteIds.size} VĐV đã chọn`
-        : "Chọn ít nhất một VĐV để check-in";
+    if(checkinSelectedBtn){
+        checkinSelectedBtn.disabled = !hasSelection;
+        checkinSelectedBtn.title = hasSelection
+            ? `Check-in ${selectedAthleteIds.size} VĐV đã chọn`
+            : "Chọn ít nhất một VĐV để check-in";
+    }
 }
 
-/** Applies current filters (search, distance, gender) to the athletes list. */
+/** Applies filters based on current selections and search term. */
 function applyFilters() {
-    const searchTerm = searchInput.value.toLowerCase().trim();
-    const selectedDistance = distanceFilterGroup.querySelector('.active')?.dataset.filter || 'all';
-    const selectedGender = genderFilterGroup.querySelector('.active')?.dataset.gender || 'all';
+    const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    const selectedDistance = distanceFilterGroup?.querySelector('.filter-btn.active')?.dataset.filter || 'all';
+    const selectedGender = genderFilterGroup?.querySelector('.filter-btn.active')?.dataset.gender || 'all';
 
     filteredAthletes = athletes.filter(athlete => {
+        // Ensure athlete object and properties exist
+        if (!athlete || !athlete.name || !athlete.bib) return false;
+
         const nameMatch = athlete.name.toLowerCase().includes(searchTerm);
         const bibMatch = athlete.bib.toLowerCase().includes(searchTerm);
         const distanceMatch = selectedDistance === 'all' || athlete.distance === selectedDistance;
+        // Case-insensitive gender match, handles empty gender
         const genderMatch = selectedGender === 'all' || (athlete.gender && athlete.gender.toLowerCase() === selectedGender.toLowerCase());
 
         return (nameMatch || bibMatch) && distanceMatch && genderMatch;
     });
 
-    renderAthletes(); // Re-render the list with filtered results
+    renderAthletes(); // Render the filtered list
 }
 
-/** Debounced version of applyFilters for search input */
+/** Debounced applyFilters */
 const debouncedApplyFilters = debounce(applyFilters, 300);
 
 // --- Check-in Logic ---
 
-/** Initiates the check-in process for a single athlete by showing the photo modal. */
+/** Initiates check-in for a single athlete. */
 function checkInAthlete(athleteId) {
     const athlete = athletes.find(a => a.id === athleteId);
     if (!athlete) {
@@ -313,13 +334,17 @@ function checkInAthlete(athleteId) {
         showNotification(`${athlete.name} (BIB: ${athlete.bib}) đã check-in rồi.`, 'info');
         return;
     }
+    if (!photoModal) {
+         showNotification(`Lỗi: Không tìm thấy cửa sổ chụp ảnh (modal).`, 'error');
+         return;
+    }
 
     currentModalAthlete = athlete;
-    deselectAllAthletes(); // Clear selection when checking in a single athlete
-    showPhotoModal(); // Open the camera modal
+    deselectAllAthletes(); // Clear multi-selection
+    showPhotoModal();
 }
 
-/** Initiates check-in for all currently selected athletes (starts with the first). */
+/** Initiates check-in for selected athletes. */
 function checkInSelectedAthletes() {
     if (selectedAthleteIds.size === 0) {
         showNotification('Vui lòng chọn ít nhất một VĐV để check-in.', 'info');
@@ -328,28 +353,29 @@ function checkInSelectedAthletes() {
 
     const athletesToCheckIn = Array.from(selectedAthleteIds)
                                    .map(id => athletes.find(a => a.id === id))
-                                   .filter(a => a && !a.checkedIn); // Only not-yet-checked-in ones
+                                   .filter(a => a && !a.checkedIn);
 
     if (athletesToCheckIn.length === 0) {
         showNotification('Tất cả VĐV đã chọn đều đã check-in.', 'info');
-        deselectAllAthletes(); // Clear selection as action is complete
+        deselectAllAthletes();
         return;
     }
 
-    // Start the process with the first selected athlete in the modal
     console.log(`Starting batch check-in. Processing ${athletesToCheckIn[0].id} first.`);
-    checkInAthlete(athletesToCheckIn[0].id);
-    // The modal flow (confirmCheckIn) will handle processing the next selected athlete
+    checkInAthlete(athletesToCheckIn[0].id); // Start with the first one
 }
-
 
 // --- Photo Modal Logic ---
 
-/** Shows the photo capture modal and starts the camera. */
+/** Shows photo modal and starts camera. */
 async function showPhotoModal() {
-    if (!currentModalAthlete) return;
+    if (!currentModalAthlete || !photoModal || !modalVideo || !modalCanvas || !modalCaptureBtn || !modalRetakeBtn || !modalConfirmBtn || !modalAthleteInfo || !modalCameraError) {
+        console.error("Photo modal or its elements not found.");
+        showNotification("Lỗi giao diện: Không thể mở cửa sổ chụp ảnh.", "error");
+        return;
+    }
 
-    // Reset modal state thoroughly
+    // Reset state
     modalVideo.style.display = 'block';
     modalCanvas.style.display = 'none';
     modalCaptureBtn.style.display = 'inline-block';
@@ -358,36 +384,40 @@ async function showPhotoModal() {
     modalCameraError.style.display = 'none';
     modalAthleteInfo.textContent = `VĐV: ${currentModalAthlete.name} (BIB: ${currentModalAthlete.bib})`;
     modalConfirmBtn.disabled = false;
-    modalConfirmBtn.innerHTML = '<i class="fas fa-check"></i> Xác nhận Check-in';
-    modalVideo.srcObject = null; // Clear previous stream
+    modalConfirmBtn.innerHTML = '<i class="fas fa-check" aria-hidden="true"></i> Xác nhận Check-in';
+    modalVideo.srcObject = null;
 
     photoModal.setAttribute('aria-hidden', 'false');
-    photoModal.classList.add('active'); // Use class for visibility/animation
+    photoModal.classList.add('active'); // Use class for transition
 
+    // Request camera access
     try {
-        console.log("Requesting camera stream (front)...");
+        console.log("Requesting camera stream (user facing)...");
         const constraints = { video: { facingMode: 'user' } };
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            throw new Error("Trình duyệt không hỗ trợ truy cập camera (getUserMedia).");
+            throw new Error("Trình duyệt không hỗ trợ truy cập camera.");
         }
         cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
         console.log("Camera stream obtained.");
         modalVideo.srcObject = cameraStream;
 
+        // Wait for video to be ready and play
         await new Promise((resolve, reject) => {
             modalVideo.onloadedmetadata = () => {
                 modalVideo.play().then(resolve).catch(reject);
             };
             modalVideo.onerror = (e) => reject(new Error("Lỗi tải video từ camera."));
-            setTimeout(() => reject(new Error("Hết thời gian chờ camera.")), 7000);
+            // Slightly longer timeout
+            setTimeout(() => reject(new Error("Hết thời gian chờ camera sẵn sàng.")), 8000);
         });
-        console.log("Video playing.");
+        console.log("Camera video playing.");
 
     } catch (error) {
-        console.error('Error accessing or playing camera:', error);
-        modalCameraError.textContent = `Lỗi camera: ${error.name} - ${error.message}. Vui lòng cấp quyền và kiểm tra thiết bị.`;
+        console.error('Error accessing or playing camera:', error); // Log full error
+        modalCameraError.textContent = `Lỗi camera: ${error.name || 'Lỗi không xác định'} - ${error.message}. Vui lòng cấp quyền và kiểm tra thiết bị.`;
         modalCameraError.style.display = 'block';
-        modalCaptureBtn.style.display = 'none';
+        modalCaptureBtn.style.display = 'none'; // Hide capture if no camera
+        // Clean up stream if partially obtained
         if (cameraStream) {
             cameraStream.getTracks().forEach(track => track.stop());
             cameraStream = null;
@@ -395,23 +425,28 @@ async function showPhotoModal() {
     }
 }
 
-/** Hides the photo capture modal and cleans up camera resources. */
+/** Hides photo modal and cleans up camera. */
 function hidePhotoModal() {
     console.log("Hiding photo modal and cleaning up camera stream.");
     if (cameraStream) {
-        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream.getTracks().forEach(track => {
+            track.stop();
+            // console.log(`Camera track stopped: ${track.kind}`);
+        });
         cameraStream = null;
     }
     if (modalVideo) {
         modalVideo.srcObject = null;
         modalVideo.pause();
-        modalVideo.removeAttribute('src');
+        modalVideo.removeAttribute('src'); // Clean up thoroughly
     }
-    photoModal.setAttribute('aria-hidden', 'true');
-    photoModal.classList.remove('active'); // Hide modal
-    currentModalAthlete = null; // Clear the athlete being processed
+    if (photoModal) {
+        photoModal.setAttribute('aria-hidden', 'true');
+        photoModal.classList.remove('active');
+    }
+    currentModalAthlete = null; // Clear current athlete
 
-    // Explicitly reset styles/states for safety
+    // Reset button/display states for next time (optional, but good practice)
     if (modalVideo) modalVideo.style.display = 'block';
     if (modalCanvas) modalCanvas.style.display = 'none';
     if (modalCaptureBtn) modalCaptureBtn.style.display = 'inline-block';
@@ -420,745 +455,618 @@ function hidePhotoModal() {
     if (modalCameraError) modalCameraError.style.display = 'none';
     if (modalConfirmBtn) {
          modalConfirmBtn.disabled = false;
-         modalConfirmBtn.innerHTML = '<i class="fas fa-check"></i> Xác nhận Check-in';
+         modalConfirmBtn.innerHTML = '<i class="fas fa-check" aria-hidden="true"></i> Xác nhận Check-in';
     }
 }
 
-/** Captures a photo from the video stream onto the canvas. */
+/** Captures photo from video to canvas. */
 function capturePhoto() {
     console.log("Attempting to capture photo...");
     if (!cameraStream || !modalVideo || modalVideo.readyState < modalVideo.HAVE_METADATA || !modalVideo.videoWidth || !modalVideo.videoHeight) {
         showNotification("Camera chưa sẵn sàng hoặc video chưa tải.", "error");
-        console.error("Capture failed: Video not ready.", { readyState: modalVideo?.readyState, w: modalVideo?.videoWidth, h: modalVideo?.videoHeight });
+        console.error("Capture failed: Video not ready.", { state: modalVideo?.readyState, w: modalVideo?.videoWidth, h: modalVideo?.videoHeight });
         return;
+    }
+    if (!modalCanvas) {
+         console.error("Canvas element not found for capture.");
+         return;
     }
 
     try {
         const context = modalCanvas.getContext('2d');
-        // Set canvas dimensions to match video to avoid distortion
         modalCanvas.width = modalVideo.videoWidth;
         modalCanvas.height = modalVideo.videoHeight;
-        console.log(`Canvas dimensions set to: ${modalCanvas.width}x${modalCanvas.height}`);
+        // console.log(`Canvas dimensions set: ${modalCanvas.width}x${modalCanvas.height}`);
 
         context.drawImage(modalVideo, 0, 0, modalCanvas.width, modalCanvas.height);
-        console.log("drawImage called.");
+        // console.log("drawImage called.");
 
-        // Update UI: Show canvas, hide video, change buttons
-        modalVideo.style.display = 'none';
+        // Update UI
+        if(modalVideo) modalVideo.style.display = 'none';
         modalCanvas.style.display = 'block';
-        modalCaptureBtn.style.display = 'none';
-        modalRetakeBtn.style.display = 'inline-block';
-        modalConfirmBtn.style.display = 'inline-block';
-        console.log("Display and buttons updated for captured photo.");
-        // Optional: Pause video after capture to save resources
+        if(modalCaptureBtn) modalCaptureBtn.style.display = 'none';
+        if(modalRetakeBtn) modalRetakeBtn.style.display = 'inline-block';
+        if(modalConfirmBtn) modalConfirmBtn.style.display = 'inline-block';
+        // console.log("Display updated for captured photo.");
+        // Optional: pause video stream
         // modalVideo.pause();
 
     } catch (error) {
-         console.error("Error during photo capture:", error);
+         console.error("Error during photo capture process:", error);
          showNotification("Lỗi khi chụp ảnh. Vui lòng thử lại.", "error");
-         retakePhoto(); // Go back to camera view on error
+         retakePhoto(); // Attempt to reset to camera view
     }
 }
 
-/** Switches back to the live camera view from the captured photo. */
+/** Switches back to live camera view. */
 function retakePhoto() {
     console.log("Retaking photo...");
-    if (!modalVideo || !modalCanvas) return;
+    if (!modalVideo || !modalCanvas || !modalCaptureBtn || !modalRetakeBtn || !modalConfirmBtn) return;
 
-    modalVideo.style.display = 'block'; // Show video
-    modalCanvas.style.display = 'none';  // Hide canvas
-    // Optional: Ensure video plays if it was paused
+    modalVideo.style.display = 'block';
+    modalCanvas.style.display = 'none';
+    // Optional: ensure video plays if paused
     // if (modalVideo.paused) {
     //     modalVideo.play().catch(e => console.error("Error resuming video:", e));
     // }
-
-    // Reset button visibility
     modalCaptureBtn.style.display = 'inline-block';
     modalRetakeBtn.style.display = 'none';
     modalConfirmBtn.style.display = 'none';
-    console.log("Retake successful: Display and buttons reset.");
+    console.log("Retake successful: UI reset.");
 }
 
-/**
- * Confirms check-in: Sends data (including photo) to Apps Script (action: 'checkin')
- * and updates local state based on the server response. Handles queue for selected athletes.
- */
+/** Confirms check-in, sends data to server, handles queue. */
 async function confirmCheckIn() {
-    if (!currentModalAthlete || !modalCanvas || modalCanvas.style.display === 'none') {
-        console.error("ConfirmCheckIn called in invalid state.");
+    if (!currentModalAthlete || !modalCanvas || !modalConfirmBtn || modalCanvas.style.display === 'none') {
+        console.error("ConfirmCheckIn called in invalid state (no athlete, canvas hidden, or button missing).");
         showNotification("Chưa chụp ảnh hoặc VĐV không hợp lệ.", "error");
         return;
     }
 
     modalConfirmBtn.disabled = true;
-    modalConfirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
+    modalConfirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Đang xử lý...';
     console.log(`Confirming check-in for athlete ID: ${currentModalAthlete.id}`);
 
     let photoDataUrl = '';
     try {
-        // Get image data as JPEG (smaller size)
-        photoDataUrl = modalCanvas.toDataURL('image/jpeg', 0.85); // Quality 85%
-        // Basic check for valid base64 data length
-        if (!photoDataUrl || photoDataUrl.length < 150) { // Check min length
-             throw new Error("Ảnh chụp không hợp lệ hoặc quá nhỏ.");
+        photoDataUrl = modalCanvas.toDataURL('image/jpeg', 0.85); // JPEG format, 85% quality
+        if (!photoDataUrl || photoDataUrl.length < 150 || !photoDataUrl.startsWith('data:image/jpeg;base64,')) {
+             console.error("Invalid photo data from canvas:", photoDataUrl?.substring(0, 100));
+             throw new Error("Dữ liệu ảnh chụp không hợp lệ.");
         }
-        console.log(`Generated photo Data URL (length: ${photoDataUrl.length})`);
+        // console.log(`Generated photo Data URL (length: ${photoDataUrl.length})`);
     } catch (error) {
         console.error('Error getting photo data from canvas:', error);
-        showNotification(`Lỗi xử lý ảnh chụp: ${error.message}`, 'error');
+        showNotification(`Lỗi xử lý ảnh chụp: ${error.message || 'Không rõ'}`, 'error');
         modalConfirmBtn.disabled = false;
-        modalConfirmBtn.innerHTML = '<i class="fas fa-check"></i> Xác nhận Check-in';
-        return; // Stop the process
+        modalConfirmBtn.innerHTML = '<i class="fas fa-check" aria-hidden="true"></i> Xác nhận Check-in';
+        return;
     }
 
-    // --- Attempt to update Google Sheet via Apps Script ---
+    // --- Send data to Apps Script ---
     try {
-        // Call the function that sends 'checkin' action to doPost
         const updateResult = await updateGoogleSheetCheckin(currentModalAthlete.id, photoDataUrl);
 
         if (updateResult && updateResult.success) {
-            // Update local data based on successful server response
+            // --- Update Local State on Success ---
             const athleteIndex = athletes.findIndex(a => a.id === currentModalAthlete.id);
             if (athleteIndex > -1) {
                 athletes[athleteIndex].checkedIn = true;
-                // Use current client time for immediate UI update, server time is in sheet
-                athletes[athleteIndex].checkinTime = formatDate(new Date());
-                // Use the ACTUAL photo URL returned by the server (from Drive)
-                athletes[athleteIndex].photoUrl = updateResult.actualPhotoUrl || '';
-                console.log(`Local athlete ${currentModalAthlete.id} updated. Photo URL: ${athletes[athleteIndex].photoUrl}`);
+                athletes[athleteIndex].checkinTime = formatDate(new Date()); // Client time for immediate UI
+                athletes[athleteIndex].photoUrl = updateResult.actualPhotoUrl || ''; // Use server's Drive URL
+                console.log(`Local athlete ${currentModalAthlete.id} updated successfully.`);
             } else {
                  console.warn(`Athlete ID ${currentModalAthlete.id} not found locally after successful check-in.`);
             }
 
             showNotification(`VĐV ${currentModalAthlete.name} (BIB: ${currentModalAthlete.bib}) đã check-in!`, 'success');
+            const justCheckedInId = currentModalAthlete.id; // Store ID before clearing currentModalAthlete
 
-            // Important: Deselect the athlete *after* successful processing
-            deselectAthlete(currentModalAthlete.id); // Remove from selection set
-            applyFilters(); // Re-render the list to show updated status and remove selection highlight
-
-            // --- Handle Queue for Batch Check-in ---
-            const remainingSelected = Array.from(selectedAthleteIds)
-                                          .map(id => athletes.find(a => a.id === id)) // Get athlete objects
-                                          .filter(a => a && !a.checkedIn); // Filter for remaining, not checked-in
+            // --- Queue Handling ---
+            // Find next *selected* athlete who is not checked in
+             const remainingSelected = Array.from(selectedAthleteIds)
+                                           .map(id => athletes.find(a => a.id === id))
+                                           .filter(a => a && !a.checkedIn && a.id !== justCheckedInId); // Exclude the one just processed
 
             if (remainingSelected.length > 0) {
                  const nextAthlete = remainingSelected[0];
-                 console.log(`Batch Check-in: Processing next selected athlete: ${nextAthlete.id}`);
-                 // Hide current modal cleanly, then open for the next one after a short delay
-                 hidePhotoModal();
-                 setTimeout(() => checkInAthlete(nextAthlete.id), 150); // Small delay for transition
+                 console.log(`Batch Check-in: Processing next -> ${nextAthlete.id}`);
+                 // Deselect the processed one *before* hiding modal (UI update happens later)
+                 deselectAthlete(justCheckedInId);
+                 hidePhotoModal(); // Clean close
+                 setTimeout(() => checkInAthlete(nextAthlete.id), 150); // Open for next
             } else {
-                 console.log("Batch Check-in: No more selected athletes to process.");
-                 hidePhotoModal(); // Close modal if the queue is empty
+                 console.log("Check-in complete or no more selected athletes in queue.");
+                 // Deselect the processed one
+                 deselectAthlete(justCheckedInId);
+                 hidePhotoModal(); // Close if queue empty
             }
-            // --- End Queue Handling ---
+             // --- End Queue Handling ---
+
+             applyFilters(); // Re-render list after potential selection changes and status update
+
 
         } else {
-            // Error occurred, notification shown by updateGoogleSheetCheckin
-            console.log("Check-in via Apps Script failed or returned error.");
-            modalConfirmBtn.disabled = false; // Allow user to retry
-            modalConfirmBtn.innerHTML = '<i class="fas fa-check"></i> Xác nhận Check-in';
-            // Do not automatically close the modal on failure, let user decide
+            // Error handled and notified by updateGoogleSheetCheckin
+            console.log("Check-in failed. Result:", updateResult);
+            // Re-enable confirm button to allow retry
+            modalConfirmBtn.disabled = false;
+            modalConfirmBtn.innerHTML = '<i class="fas fa-check" aria-hidden="true"></i> Xác nhận Check-in';
         }
-    } catch (error) { // Catch unexpected errors during the confirm flow
-        console.error('Unexpected error during check-in confirmation flow:', error);
-        showNotification('Có lỗi không mong muốn khi xác nhận check-in.', 'error');
+    } catch (error) { // Catch unexpected errors in this flow
+        console.error('Unexpected error during check-in confirmation:', error);
+        showNotification(`Lỗi không mong muốn khi xác nhận: ${error.message || 'Không rõ'}`, 'error');
         modalConfirmBtn.disabled = false;
-        modalConfirmBtn.innerHTML = '<i class="fas fa-check"></i> Xác nhận Check-in';
+        modalConfirmBtn.innerHTML = '<i class="fas fa-check" aria-hidden="true"></i> Xác nhận Check-in';
     }
 }
 
-/**
- * Sends a Check-in request to the Apps Script Web App (doPost, action: 'checkin').
- * Returns Promise<{success: boolean, actualPhotoUrl?: string, error?: string}>
- * @param {string} id Athlete ID.
- * @param {string} photoDataUrl Base64 encoded image data URL.
- */
+/** Sends Check-in request to Apps Script doPost. */
 async function updateGoogleSheetCheckin(id, photoDataUrl) {
     const now = new Date();
     const timeString = formatDate(now);
+    const postData = { action: ACTION_CHECKIN, id: id, time: timeString, photoUrl: photoDataUrl };
 
-    const postData = {
-        action: 'checkin', // Specify the action for doPost
-        id: id,
-        time: timeString,
-        photoUrl: photoDataUrl // Base64 image data
-    };
-
-    console.log(`Attempting POST Check-in to: ${WEBAPP_URL} for ID: ${id}.`);
-
+    // console.log(`Attempting POST Check-in to: ${WEBAPP_URL} for ID: ${id}.`);
     if (!WEBAPP_URL || !WEBAPP_URL.startsWith('https://script.google.com/macros/s/')) {
-         showNotification('URL Web App không hợp lệ.', 'error');
+         showNotification('Lỗi cấu hình: URL Web App không hợp lệ.', 'error');
          return { success: false, error: 'Invalid WEBAPP_URL configuration.' };
     }
 
     try {
         const response = await fetch(WEBAPP_URL, {
-            method: 'POST',
-            mode: 'cors', // Required for cross-origin requests
-            cache: 'no-cache',
+            method: 'POST', mode: 'cors', cache: 'no-cache',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(postData),
-            redirect: 'follow' // Handle potential redirects
+            body: JSON.stringify(postData), redirect: 'follow'
         });
+        // console.log(`Check-in POST Response Status: ${response.status} ${response.statusText}`);
 
         let responseData = null;
+        let responseText = '';
         try {
-            // Try parsing the JSON response
-            responseData = await response.json();
-            console.log('Received Check-in response:', responseData);
+            responseText = await response.text();
+            responseData = JSON.parse(responseText);
+            // console.log('Received Check-in JSON response:', responseData);
         } catch (e) {
-            // Handle cases where response is not valid JSON
             console.error("Could not parse JSON response for check-in:", e);
-            const textResponse = await response.text().catch(() => "Could not read response text.");
-            const errorMsg = `Lỗi ${response.status}: Server trả về dữ liệu không hợp lệ. ${textResponse.substring(0,150)}`;
-            showNotification(errorMsg, 'error');
-            return { success: false, error: errorMsg, status: response.status };
+            console.error("Raw Response Text:", responseText);
+            const errorMsg = `Lỗi ${response.status}: Server trả về phản hồi không hợp lệ.`;
+            showNotification(errorMsg, 'error', 8000);
+            return { success: false, error: errorMsg, status: response.status, responseBody: responseText };
         }
 
-        // Check if response status is OK AND logical success from Apps Script
         if (!response.ok || responseData.success === false) {
-            const errorMsg = responseData?.error || `Lỗi không xác định từ server (Status ${response.status})`;
-            console.error('Check-in request failed:', errorMsg);
-            showNotification(`Lỗi Check-in VĐV ${id}: ${errorMsg}`, 'error', 6000);
-            return { success: false, error: errorMsg, status: response.status, athleteId: id };
+            const errorMsgFromServer = responseData?.error || `Lỗi không rõ từ server (Status ${response.status})`;
+            console.error(`Check-in request failed. Status: ${response.status}. Server Error: ${errorMsgFromServer}. Full Response:`, responseData);
+            // Show specific error message from server if available
+            showNotification(`Lỗi Check-in VĐV ${id}: ${errorMsgFromServer}`, 'error', 6000);
+            return { success: false, error: errorMsgFromServer, status: response.status, athleteId: id };
         }
 
-        // Check-in successful
-        return {
-            success: true,
-            actualPhotoUrl: responseData.actualPhotoUrl || null // Pass back the actual Drive URL
-         };
+        return { success: true, actualPhotoUrl: responseData.actualPhotoUrl || null };
 
-    } catch (error) { // Catch network errors or other fetch-related issues
-        console.error('Network or other error during check-in POST:', error);
+    } catch (error) {
+        console.error('Network or unexpected error during check-in POST:', error);
         const displayError = (error instanceof TypeError && error.message.includes('Failed to fetch'))
                            ? 'Lỗi kết nối mạng khi gửi yêu cầu check-in.'
-                           : `Lỗi không xác định: ${error.message}`;
+                           : `Lỗi Client-side: ${error.message || 'Không rõ'}`;
         showNotification(displayError, 'error');
         return { success: false, error: displayError };
     }
 }
 
-
 // --- QR Code Scanning ---
-
+// (Giữ nguyên code QR từ câu trả lời trước - startQrScanning, stopQrScanning, processQrCode)
 /** Starts the QR code scanning process. */
 async function startQrScanning() {
-    // Check if jsQR library is loaded (must be included in HTML)
     if (typeof jsQR === 'undefined') {
         showNotification('Thư viện quét QR (jsQR) chưa được tải.', 'error');
         console.error("jsQR library is not loaded. Make sure it's included in your HTML.");
         return;
     }
-
     if (qrScanner) {
-        showNotification('Đang quét QR...', 'info'); // Prevent multiple scanners
+        showNotification('Đang quét QR...', 'info');
         return;
     }
 
-    // Create video element dynamically for scanning
     qrScanner = document.createElement('video');
-    qrScanner.setAttribute('playsinline', ''); // Important for iOS Safari
+    qrScanner.setAttribute('playsinline', '');
     qrScanner.style.position = 'fixed';
-    qrScanner.style.top = '0';
-    qrScanner.style.left = '0';
+    qrScanner.style.inset = '0'; // Use inset
     qrScanner.style.width = '100%';
     qrScanner.style.height = '100%';
-    qrScanner.style.objectFit = 'cover'; // Cover the screen
-    qrScanner.style.zIndex = '1500'; // Ensure it's on top
+    qrScanner.style.objectFit = 'cover';
+    qrScanner.style.zIndex = '1500';
     document.body.appendChild(qrScanner);
 
-    // Add a prominent close button
     const closeScanBtn = document.createElement('button');
     closeScanBtn.textContent = '✕ Đóng Quét QR';
+    closeScanBtn.type = 'button'; // Explicitly set type
     closeScanBtn.style.position = 'fixed';
-    closeScanBtn.style.bottom = '30px'; // Position lower
+    closeScanBtn.style.bottom = '30px';
     closeScanBtn.style.left = '50%';
     closeScanBtn.style.transform = 'translateX(-50%)';
-    closeScanBtn.style.zIndex = '1501'; // Above video
-    closeScanBtn.style.padding = '12px 25px'; // Make it larger
+    closeScanBtn.style.zIndex = '1501';
+    closeScanBtn.style.padding = '12px 25px';
     closeScanBtn.style.fontSize = '16px';
-    closeScanBtn.style.backgroundColor = 'rgba(220, 53, 69, 0.9)'; // Red, slightly transparent
+    closeScanBtn.style.backgroundColor = 'rgba(220, 53, 69, 0.9)';
     closeScanBtn.style.color = 'white';
     closeScanBtn.style.border = 'none';
     closeScanBtn.style.borderRadius = '8px';
     closeScanBtn.style.cursor = 'pointer';
-    closeScanBtn.onclick = stopQrScanning;
+    closeScanBtn.onclick = stopQrScanning; // Assign function directly
     document.body.appendChild(closeScanBtn);
-    qrScanner.closeButton = closeScanBtn; // Store reference for cleanup
+    qrScanner.closeButton = closeScanBtn;
 
-    // Create canvas for processing frames (offscreen is fine)
     const qrCanvas = document.createElement('canvas');
-    // Add { willReadFrequently: true } for potential performance boost
     const qrContext = qrCanvas.getContext('2d', { willReadFrequently: true });
 
     showNotification('Hướng camera vào mã QR...', 'info', 5000);
 
     try {
         console.log("Requesting camera stream (environment)...");
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'environment' } // Prefer back camera
-        });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
         qrScanner.srcObject = stream;
-        await qrScanner.play(); // Wait for play to start
+        await qrScanner.play();
 
-        // Wait for metadata to get video dimensions correctly
         await new Promise(resolve => {
-             if (qrScanner.readyState >= qrScanner.HAVE_METADATA) {
-                 resolve();
-             } else {
-                 qrScanner.onloadedmetadata = resolve;
-             }
+             if (qrScanner.readyState >= qrScanner.HAVE_METADATA) resolve();
+             else qrScanner.onloadedmetadata = resolve;
          });
 
         qrCanvas.width = qrScanner.videoWidth;
         qrCanvas.height = qrScanner.videoHeight;
-        console.log(`QR Scanner dimensions set: ${qrCanvas.width}x${qrCanvas.height}`);
+        console.log(`QR Scanner dimensions: ${qrCanvas.width}x${qrCanvas.height}`);
 
-        // Start scanning frames
         function scanFrame() {
-            // Check if scanner is still active and ready
             if (!qrScanner || !qrScanner.srcObject || qrScanner.paused || qrScanner.ended || !qrScanner.videoWidth) {
-                 console.log("QR scan loop stopped: Scanner not active or ready.");
-                 return; // Stop the loop if scanner is closed or video not ready
+                 return; // Stop loop
             }
-
              try {
-                 // Adjust canvas size if video dimensions change (e.g., orientation change)
                  if(qrCanvas.width !== qrScanner.videoWidth || qrCanvas.height !== qrScanner.videoHeight) {
                     qrCanvas.width = qrScanner.videoWidth;
                     qrCanvas.height = qrScanner.videoHeight;
-                    console.log(`QR Scanner dimensions updated: ${qrCanvas.width}x${qrCanvas.height}`);
                  }
-
-                // Draw video frame to canvas
                 qrContext.drawImage(qrScanner, 0, 0, qrCanvas.width, qrCanvas.height);
-                // Get image data from canvas
                 const imageData = qrContext.getImageData(0, 0, qrCanvas.width, qrCanvas.height);
 
-                // Check if image data is valid before passing to jsQR
-                if (!imageData || !imageData.data || imageData.data.length === 0) {
-                     console.warn("QR Scan: Captured empty image data.");
-                     qrAnimation = requestAnimationFrame(scanFrame); // Request next frame
-                     return;
+                if (!imageData?.data?.length) {
+                     qrAnimation = requestAnimationFrame(scanFrame); return; // Try next frame
                 }
+                const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
 
-                // Attempt to decode QR code
-                const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                     inversionAttempts: "dontInvert", // Optimization for standard QR codes
-                });
-
-                // If a code is found
                 if (code && code.data) {
                     console.log('QR Code detected:', code.data);
                     showNotification(`Đã quét mã: ${code.data}`, 'success', 2000);
-                    stopQrScanning(); // Stop scanning process
-                    processQrCode(code.data); // Process the scanned data
+                    stopQrScanning();
+                    processQrCode(code.data);
                 } else {
-                    // If no code found, continue scanning next frame
-                    qrAnimation = requestAnimationFrame(scanFrame);
+                    qrAnimation = requestAnimationFrame(scanFrame); // Continue
                 }
              } catch (scanError) {
                  console.error("Error during QR frame scan:", scanError);
-                 // Decide whether to stop or continue on error
-                 // For robustness, let's continue scanning unless the scanner itself is dead
-                 if (qrScanner && qrScanner.srcObject) {
+                 if (qrScanner && qrScanner.srcObject) { // Continue if possible
                      qrAnimation = requestAnimationFrame(scanFrame);
                  } else {
-                     stopQrScanning(); // Cleanup if the scanner is gone
+                     stopQrScanning(); // Cleanup if fatal
                  }
              }
         }
-        // Start the first frame scan
-        qrAnimation = requestAnimationFrame(scanFrame);
+        qrAnimation = requestAnimationFrame(scanFrame); // Start loop
 
     } catch (error) {
         console.error('Error accessing camera for QR scanning:', error);
-        showNotification(`Lỗi camera QR: ${error.name}. Vui lòng cấp quyền và kiểm tra thiết bị.`, 'error');
-        stopQrScanning(); // Clean up UI and resources if camera fails
+        showNotification(`Lỗi camera QR: ${error.name}. Vui lòng cấp quyền và kiểm tra.`, 'error');
+        stopQrScanning();
     }
 }
-
-/** Stops the QR code scanning process and cleans up resources. */
+/** Stops QR scanning and cleans up. */
 function stopQrScanning() {
     console.log('Stopping QR Scanning...');
-    if (qrAnimation) {
-        cancelAnimationFrame(qrAnimation); // Stop the scan loop
-        qrAnimation = null;
-    }
+    if (qrAnimation) cancelAnimationFrame(qrAnimation);
+    qrAnimation = null;
     if (qrScanner) {
-        // Stop camera tracks first
         if (qrScanner.srcObject) {
             qrScanner.srcObject.getTracks().forEach(track => track.stop());
-            qrScanner.srcObject = null; // Release the source
-            console.log('QR Camera tracks stopped.');
+            qrScanner.srcObject = null;
         }
-        // Remove the close button if it exists
-         if (qrScanner.closeButton) {
-            qrScanner.closeButton.remove();
-         }
-        // Remove the video element from the DOM
+        if (qrScanner.closeButton) qrScanner.closeButton.remove();
         qrScanner.remove();
-        qrScanner = null; // Clear the variable
-        console.log('QR Scanner element removed.');
-    } else {
-         console.log('QR Scanner was already stopped/null.');
+        qrScanner = null;
+        console.log('QR Scanner stopped and removed.');
     }
 }
-
-/** Processes the data obtained from the QR code (usually BIB or ID). */
+/** Processes scanned QR data. */
 function processQrCode(qrData) {
-    // Ensure qrData is a non-empty string
     qrData = String(qrData || '').trim();
     if (!qrData) {
-        showNotification('Mã QR không hợp lệ hoặc trống.', 'error');
-        return;
+        showNotification('Mã QR không hợp lệ.', 'error'); return;
     }
     console.log(`Processing QR data: "${qrData}"`);
-
-    // Normalize QR data for comparison
     const lowerQrData = qrData.toLowerCase();
 
-    // Attempt to find athlete by BIB first (case-insensitive)
-    let foundAthlete = athletes.find(a => a.bib && String(a.bib).toLowerCase() === lowerQrData);
-
-    // If not found by BIB, try finding by ID (case-insensitive)
-    if (!foundAthlete) {
-        console.log(`QR Data "${qrData}" not found as BIB, trying as ID...`);
-        foundAthlete = athletes.find(a => a.id && String(a.id).toLowerCase() === lowerQrData);
-    }
+    let foundAthlete = athletes.find(a => a.bib && String(a.bib).toLowerCase() === lowerQrData)
+                    || athletes.find(a => a.id && String(a.id).toLowerCase() === lowerQrData); // Combine find attempts
 
     if (foundAthlete) {
         showNotification(`Tìm thấy VĐV: ${foundAthlete.name} (BIB: ${foundAthlete.bib})`, 'success');
-
-        // --- Optional UX Enhancements ---
-        // 1. Scroll to the athlete card in the list
-        const card = athletesListContainer.querySelector(`.athlete-card[data-id="${foundAthlete.id}"]`);
+        const card = athletesListContainer?.querySelector(`.athlete-card[data-id="${foundAthlete.id}"]`);
         if(card) {
             card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            // 2. Add a temporary highlight effect
-            card.classList.add('highlight'); // Add a CSS class for highlighting
-            setTimeout(() => {
-                if (card) card.classList.remove('highlight'); // Remove highlight after a delay
-            }, 2500); // Highlight for 2.5 seconds
+            card.classList.add('highlight');
+            setTimeout(() => card?.classList.remove('highlight'), 2500);
         }
-        // --- End Optional UX ---
-
-        // Automatically start the check-in process for the found athlete
-        checkInAthlete(foundAthlete.id);
-
+        checkInAthlete(foundAthlete.id); // Initiate check-in
     } else {
-        // If no athlete found by either BIB or ID
         showNotification(`Không tìm thấy VĐV nào khớp với mã QR: ${qrData}`, 'error');
     }
 }
 
 // --- Data Export and GitHub Commit ---
 
-/** Exports currently filtered checked-in athletes to a JSON file. */
+/** Exports filtered checked-in athletes. */
 function exportToJson() {
-    const dataToExport = filteredAthletes
-        .filter(a => a.checkedIn) // Only checked-in athletes in the current view
-        .map(({ id, name, bib, distance, gender, checkinTime, photoUrl }) => ({
-            id, name, bib, distance, gender, checkinTime,
-            // Optionally exclude potentially large photoUrl if not needed in export
-             photoUrl: photoUrl // Include Drive URL
-        }));
+     const dataToExport = filteredAthletes
+        .filter(a => a.checkedIn)
+        .map(({ id, name, bib, distance, gender, checkinTime, photoUrl }) =>
+            ({ id, name, bib, distance, gender, checkinTime, photoUrl })); // Include Drive URL
 
     if (dataToExport.length === 0) {
-        showNotification('Không có VĐV đã check-in nào trong bộ lọc hiện tại để xuất.', 'info');
+        showNotification('Không có VĐV đã check-in trong bộ lọc hiện tại.', 'info');
         return;
     }
-
-    const jsonString = JSON.stringify(dataToExport, null, 2); // Pretty print JSON
-    const blob = new Blob([jsonString], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    a.download = `checked_in_athletes_${timestamp}.json`;
-    document.body.appendChild(a); // Required for Firefox
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    showNotification(`Đã xuất ${dataToExport.length} VĐV ra file JSON.`, 'success');
+    try {
+        const jsonString = JSON.stringify(dataToExport, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        a.download = `checked_in_athletes_${timestamp}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showNotification(`Đã xuất ${dataToExport.length} VĐV ra file JSON.`, 'success');
+    } catch (error) {
+         console.error("Error exporting to JSON:", error);
+         showNotification(`Lỗi khi xuất file JSON: ${error.message}`, 'error');
+    }
 }
-
-/** Triggers the GitHub commit process securely via Apps Script doPost. */
+/** Triggers GitHub commit via Apps Script. */
 async function commitToGitHub() {
     if (isCommitting) {
-        showNotification("Đang đẩy dữ liệu lên GitHub...", "info", 2000);
-        return; // Prevent concurrent commits
+        showNotification("Đang đẩy dữ liệu...", "info", 2000); return;
     }
+    if(!commitBtn) return; // Exit if button doesn't exist
+
     isCommitting = true;
     commitBtn.disabled = true;
-    commitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang đẩy...';
+    commitBtn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Đang đẩy...';
     console.log("Requesting GitHub commit via Apps Script...");
 
-    // Prepare data to send to Apps Script
-    const postData = {
-        action: 'commit' // Tell Apps Script which action to perform
-        // No need to send athlete data, Apps Script reads directly from the Sheet
-    };
+    const postData = { action: ACTION_COMMIT };
 
     if (!WEBAPP_URL || !WEBAPP_URL.startsWith('https://script.google.com/macros/s/')) {
-         showNotification('URL Web App không hợp lệ.', 'error');
-         isCommitting = false; // Reset flag
-         commitBtn.disabled = false; // Re-enable button
-         commitBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Đẩy lên GitHub';
+         showNotification('Lỗi cấu hình: URL Web App không hợp lệ.', 'error');
+         // Reset button state immediately
+         isCommitting = false;
+         commitBtn.disabled = false;
+         commitBtn.innerHTML = '<i class="fas fa-cloud-upload-alt" aria-hidden="true"></i> Đẩy lên GitHub';
          return;
     }
 
     try {
-        // Send the commit request to Apps Script doPost
         const response = await fetch(WEBAPP_URL, {
-            method: 'POST',
-            mode: 'cors',
-            cache: 'no-cache',
+            method: 'POST', mode: 'cors', cache: 'no-cache',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(postData),
-            redirect: 'follow'
+            body: JSON.stringify(postData), redirect: 'follow'
         });
+        // console.log(`Commit POST Response Status: ${response.status} ${response.statusText}`);
 
         let responseData = null;
+        let responseText = '';
         try {
-            // Attempt to parse the response from Apps Script
-            responseData = await response.json();
-            console.log('Received Commit response:', responseData);
+            responseText = await response.text();
+            responseData = JSON.parse(responseText);
+            // console.log('Received Commit JSON response:', responseData);
         } catch (e) {
-            // Handle cases where the response isn't valid JSON
             console.error("Could not parse JSON response for commit:", e);
-            const textResponse = await response.text().catch(() => "Could not read response text.");
-            const errorMsg = `Lỗi ${response.status}: Server trả về dữ liệu không hợp lệ khi commit. ${textResponse.substring(0,150)}`;
-            showNotification(errorMsg, 'error');
-            // Throw error to be caught by the outer catch block
-            throw new Error(errorMsg);
+            console.error("Raw Response Text:", responseText);
+            const errorMsg = `Lỗi ${response.status}: Server trả về phản hồi không hợp lệ khi commit.`;
+            showNotification(errorMsg, 'error', 8000);
+            throw new Error(errorMsg); // Throw to outer catch
         }
 
-        // Check if the response status is OK AND if Apps Script reported success
         if (!response.ok || responseData.success === false) {
-            const errorMsg = responseData?.error || `Lỗi không xác định từ server khi commit (Status ${response.status})`;
-            console.error('Commit request failed:', errorMsg);
-            showNotification(`Lỗi đẩy lên GitHub: ${errorMsg}`, 'error', 8000);
-            // Throw error to be caught by the outer catch block
-            throw new Error(errorMsg);
+            const errorMsgFromServer = responseData?.error || `Lỗi không rõ từ server khi commit (Status ${response.status})`;
+            console.error(`Commit request failed. Status: ${response.status}. Server Error: ${errorMsgFromServer}. Full Response:`, responseData);
+            showNotification(`Lỗi đẩy lên GitHub: ${errorMsgFromServer}`, 'error', 8000);
+            throw new Error(errorMsgFromServer); // Throw to outer catch
         }
 
-        // If everything is successful
-        showNotification(`Đẩy dữ liệu lên GitHub thành công! Commit: ${responseData.commitUrl || '(Kiểm tra GitHub)'}`, 'success', 7000);
+        showNotification(`Đẩy dữ liệu lên GitHub thành công! ${responseData.commitUrl ? 'Xem commit' : ''}`, 'success', 7000);
+        // Optionally open commit URL in new tab:
+        // if(responseData.commitUrl) window.open(responseData.commitUrl, '_blank');
 
-    } catch (error) { // Catch errors from fetch or thrown logical errors
+    } catch (error) {
         console.error('Error during GitHub commit request process:', error);
-        // Notification was likely shown already where the error was detected
-        // Optionally show a generic error here if needed:
-        // showNotification(`Lỗi khi thực hiện đẩy lên GitHub: ${error.message}`, 'error');
+        // Notification was likely shown already
     } finally {
-        // Always reset the committing flag and re-enable the button
         isCommitting = false;
-        commitBtn.disabled = false;
-        commitBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Đẩy lên GitHub';
+        if (commitBtn) {
+             commitBtn.disabled = false;
+             commitBtn.innerHTML = '<i class="fas fa-cloud-upload-alt" aria-hidden="true"></i> Đẩy lên GitHub';
+        }
     }
 }
 
+
 // --- Athlete Selection Logic ---
 
-/** Toggles the selection state of an athlete card. */
+/** Toggles selection state of an athlete card. */
 function toggleAthleteSelection(athleteId) {
+    if (!athletesListContainer) return;
     const card = athletesListContainer.querySelector(`.athlete-card[data-id="${athleteId}"]`);
     if (!card) return;
+
+    const athlete = athletes.find(a => a.id === athleteId);
+    // Prevent selection if athlete not found or already checked in
+    if (!athlete || athlete.checkedIn) {
+        if(athlete && athlete.checkedIn) showNotification(`${athlete.name} đã check-in rồi.`, 'info');
+        // Ensure card is not marked as selected if checked-in
+        if(selectedAthleteIds.has(athleteId)) deselectAthlete(athleteId);
+        return;
+    }
 
     if (selectedAthleteIds.has(athleteId)) {
         selectedAthleteIds.delete(athleteId);
         card.classList.remove('selected');
         card.setAttribute('aria-pressed', 'false');
     } else {
-        // Only allow selecting athletes who are not already checked in
-        const athlete = athletes.find(a => a.id === athleteId);
-        if (athlete && !athlete.checkedIn) {
-             selectedAthleteIds.add(athleteId);
-             card.classList.add('selected');
-             card.setAttribute('aria-pressed', 'true');
-        } else if (athlete && athlete.checkedIn) {
-            showNotification(`${athlete.name} đã check-in rồi, không thể chọn.`, 'info');
-        }
+        selectedAthleteIds.add(athleteId);
+        card.classList.add('selected');
+        card.setAttribute('aria-pressed', 'true');
     }
-    updateResultsCount(); // Update button states
+    updateResultsCount();
 }
-
-/** Deselects a specific athlete (e.g., after successful check-in). */
+/** Deselects a specific athlete. */
 function deselectAthlete(athleteId) {
      if (selectedAthleteIds.has(athleteId)) {
         selectedAthleteIds.delete(athleteId);
-        const card = athletesListContainer.querySelector(`.athlete-card[data-id="${athleteId}"]`);
+        const card = athletesListContainer?.querySelector(`.athlete-card[data-id="${athleteId}"]`);
         if (card) {
             card.classList.remove('selected');
             card.setAttribute('aria-pressed', 'false');
         }
-        updateResultsCount(); // Update button state
+        updateResultsCount();
     }
 }
-
-/** Deselects all currently selected athletes. */
+/** Deselects all athletes. */
 function deselectAllAthletes() {
-    if (selectedAthleteIds.size === 0) return; // No need to do anything if empty
+    if (selectedAthleteIds.size === 0) return;
     selectedAthleteIds.forEach(id => {
-         const card = athletesListContainer.querySelector(`.athlete-card[data-id="${id}"]`);
+         const card = athletesListContainer?.querySelector(`.athlete-card[data-id="${id}"]`);
         if (card) {
             card.classList.remove('selected');
             card.setAttribute('aria-pressed', 'false');
         }
     });
     selectedAthleteIds.clear();
-    updateResultsCount(); // Update button state
-    console.log("All athletes deselected.");
+    updateResultsCount();
+    // console.log("All athletes deselected.");
 }
-
 
 // --- Event Listeners ---
 
-/** Sets up all event listeners for the application. */
+/** Sets up all event listeners. */
 function setupEventListeners() {
-    // Search Input with Debounce
-    searchInput.addEventListener('input', debouncedApplyFilters);
+    // Search Input
+    if (searchInput) searchInput.addEventListener('input', debouncedApplyFilters);
+    else console.warn("Search input not found.");
 
     // Refresh Button
-    refreshBtn.addEventListener('click', fetchAthletes);
+    if (refreshBtn) refreshBtn.addEventListener('click', fetchAthletes);
+    else console.warn("Refresh button not found.");
 
-    // Filter Buttons (Distance & Gender) - Using Event Delegation
-    distanceFilterGroup.addEventListener('click', (e) => {
-        if (e.target.matches('.filter-btn')) {
-            // Remove active class from all buttons in this group
-            distanceFilterGroup.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.classList.remove('active');
-                btn.setAttribute('aria-pressed', 'false');
-            });
-            // Add active class to the clicked button
-            e.target.classList.add('active');
-            e.target.setAttribute('aria-pressed', 'true');
-            applyFilters(); // Apply filters after selection change
-        }
-    });
-    genderFilterGroup.addEventListener('click', (e) => {
-        if (e.target.matches('.filter-btn')) {
-            // Similar logic for gender filter buttons
-            genderFilterGroup.querySelectorAll('.filter-btn').forEach(btn => {
-                 btn.classList.remove('active');
-                 btn.setAttribute('aria-pressed', 'false');
-            });
-            e.target.classList.add('active');
-            e.target.setAttribute('aria-pressed', 'true');
-            applyFilters();
-        }
-    });
-
-    // Athlete List Container - Event Delegation for clicks and keyboard
-    athletesListContainer.addEventListener('click', (e) => {
-        const card = e.target.closest('.athlete-card');
-        if (!card) return; // Exit if click wasn't on or inside a card
-
-        const athleteId = card.dataset.id;
-        const athlete = athletes.find(a => a.id === athleteId);
-        if (!athlete) return; // Exit if athlete data not found
-
-        // Handle double-click vs single-click
-        if (e.detail === 2) { // Simple double-click detection
-             // Handled by the dblclick listener added in renderAthletes
-        } else {
-             // Single click: Toggle selection only if not checked in
-            if (!athlete.checkedIn) {
-                 toggleAthleteSelection(athleteId);
-            } else {
-                 showNotification(`${athlete.name} đã check-in rồi.`, 'info');
-                 // Optionally deselect if already selected
-                 if (selectedAthleteIds.has(athleteId)) {
-                     deselectAthlete(athleteId);
-                 }
+    // Filter Buttons Delegation
+    if (distanceFilterGroup) {
+        distanceFilterGroup.addEventListener('click', (e) => {
+            if (e.target.matches('.filter-btn')) {
+                distanceFilterGroup.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.classList.remove('active'); btn.setAttribute('aria-pressed', 'false');
+                });
+                e.target.classList.add('active'); e.target.setAttribute('aria-pressed', 'true');
+                applyFilters();
             }
-        }
-    });
-    athletesListContainer.addEventListener('keydown', (e) => {
-         // Handle Enter or Space key press on a focused card
-         const card = e.target.closest('.athlete-card');
-         if (!card) return;
-         if (e.key === 'Enter' || e.key === ' ') {
-             e.preventDefault(); // Prevent default space scroll or enter submit
-             const athleteId = card.dataset.id;
-             const athlete = athletes.find(a => a.id === athleteId);
-             if (athlete && !athlete.checkedIn) {
-                 // Option 1: Toggle selection with Enter/Space
-                 toggleAthleteSelection(athleteId);
-                 // Option 2: Directly initiate check-in with Enter/Space?
-                 // checkInAthlete(athleteId);
-             } else if (athlete && athlete.checkedIn) {
-                  showNotification(`${athlete.name} đã check-in rồi.`, 'info');
+        });
+    } else console.warn("Distance filter group not found.");
+
+    if (genderFilterGroup) {
+         genderFilterGroup.addEventListener('click', (e) => {
+             if (e.target.matches('.filter-btn')) {
+                 genderFilterGroup.querySelectorAll('.filter-btn').forEach(btn => {
+                     btn.classList.remove('active'); btn.setAttribute('aria-pressed', 'false');
+                 });
+                 e.target.classList.add('active'); e.target.setAttribute('aria-pressed', 'true');
+                 applyFilters();
              }
-         }
-     });
+         });
+    } else console.warn("Gender filter group not found.");
 
-     // Check-in Selected Button
-     checkinSelectedBtn.addEventListener('click', checkInSelectedAthletes);
+    // Athlete List Delegation (Click)
+    if (athletesListContainer) {
+        athletesListContainer.addEventListener('click', (e) => {
+            const card = e.target.closest('.athlete-card');
+            if (!card) return;
+            const athleteId = card.dataset.id;
+            // Single click toggles selection (dblclick handled separately)
+            if (e.detail === 1) { // Ensure it's a single click
+                 toggleAthleteSelection(athleteId);
+            }
+        });
+         // Athlete List Delegation (Keyboard)
+         athletesListContainer.addEventListener('keydown', (e) => {
+             const card = e.target.closest('.athlete-card');
+             if (!card) return;
+             if (e.key === 'Enter' || e.key === ' ') {
+                 e.preventDefault();
+                 toggleAthleteSelection(card.dataset.id); // Enter/Space toggles selection
+             }
+         });
+    } else console.error("Athletes list container not found!");
 
-     // QR Scan Button - This should now work correctly
-     qrScanBtn.addEventListener('click', startQrScanning);
 
-     // Export Button
-     exportBtn.addEventListener('click', exportToJson);
+    // Action Buttons
+    if (checkinSelectedBtn) checkinSelectedBtn.addEventListener('click', checkInSelectedAthletes);
+    else console.warn("Checkin selected button not found.");
 
-     // Commit Button
-     commitBtn.addEventListener('click', commitToGitHub);
+    if (qrScanBtn) qrScanBtn.addEventListener('click', startQrScanning);
+    else console.warn("QR scan button not found.");
 
-     // Photo Modal Buttons & Interactions
-     modalCloseBtn.addEventListener('click', hidePhotoModal);
-     modalCancelBtn.addEventListener('click', hidePhotoModal);
-     modalCaptureBtn.addEventListener('click', capturePhoto);
-     modalRetakeBtn.addEventListener('click', retakePhoto);
-     modalConfirmBtn.addEventListener('click', confirmCheckIn);
-     // Close modal if clicking on the background overlay
-     photoModal.addEventListener('click', (e) => {
-         if (e.target === photoModal) {
-             hidePhotoModal();
-         }
-     });
-     // Close modal with Escape key
-     photoModal.addEventListener('keydown', (e) => {
-         if (e.key === 'Escape') {
-             hidePhotoModal();
-         }
-     });
+    if (exportBtn) exportBtn.addEventListener('click', exportToJson);
+    else console.warn("Export button not found.");
+
+    if (commitBtn) commitBtn.addEventListener('click', commitToGitHub);
+    else console.warn("Commit button not found.");
+
+    // Photo Modal Buttons & Interactions (Check if elements exist)
+    if(modalCloseBtn) modalCloseBtn.addEventListener('click', hidePhotoModal);
+    if(modalCancelBtn) modalCancelBtn.addEventListener('click', hidePhotoModal);
+    if(modalCaptureBtn) modalCaptureBtn.addEventListener('click', capturePhoto);
+    if(modalRetakeBtn) modalRetakeBtn.addEventListener('click', retakePhoto);
+    if(modalConfirmBtn) modalConfirmBtn.addEventListener('click', confirmCheckIn);
+    if (photoModal) {
+        photoModal.addEventListener('click', (e) => { if (e.target === photoModal) hidePhotoModal(); });
+        photoModal.addEventListener('keydown', (e) => { if (e.key === 'Escape') hidePhotoModal(); });
+    } else console.warn("Photo modal element not found.");
 }
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM fully loaded.');
+    console.log('DOM fully loaded. Initializing application...');
 
-    // Check for jsQR dependency
+    // Check critical dependencies
     if (typeof jsQR === 'undefined') {
-         console.error("jsQR library not loaded! QR Scanning will not work.");
-         showNotification("Lỗi: Thư viện quét QR không tải được.", "error", 10000);
-         // Disable QR button if library is missing
+         console.error("jsQR library not loaded! QR Scanning disabled.");
+         showNotification("Lỗi: Thư viện quét QR không tải được. Chức năng quét QR bị vô hiệu hóa.", "error", 10000);
          if(qrScanBtn) qrScanBtn.disabled = true;
     }
-
-    // Validate WebApp URL basic format
-    if (!WEBAPP_URL || !WEBAPP_URL.startsWith('https://script.google.com/macros/s/')) {
-        showNotification("LỖI CẤU HÌNH: URL Web App không hợp lệ! Vui lòng kiểm tra file script.js.", "error", 15000);
-        console.error("WEBAPP_URL is not configured correctly! Please paste the correct URL from Apps Script deployment.");
-        // Disable server interaction buttons if URL is invalid
+    if (!WEBAPP_URL || !WEBAPP_URL.startsWith('https://script.google.com/macros/s/') || WEBAPP_URL.includes('PASTE_YOUR_NEW_WEB_APP_URL_HERE')) {
+        showNotification("LỖI CẤU HÌNH NGHIÊM TRỌNG: URL Web App không hợp lệ hoặc chưa được cập nhật trong script.js!", "error", 30000);
+        console.error("WEBAPP_URL is invalid or placeholder! Please update script.js with the correct URL.");
+        // Disable server interactions
         if(refreshBtn) refreshBtn.disabled = true;
         if(checkinSelectedBtn) checkinSelectedBtn.disabled = true;
         if(commitBtn) commitBtn.disabled = true;
-        if(qrScanBtn) qrScanBtn.disabled = true; // QR scan leads to check-in
-        // Optionally hide the loader as fetching won't happen
+        if(qrScanBtn) qrScanBtn.disabled = true;
         if (loader) loader.style.display = 'none';
-        return; // Stop further initialization if URL is bad
+        return; // Stop initialization
     }
 
-    // Setup event listeners if URL seems okay
+    // If dependencies are ok, setup listeners and fetch data
     setupEventListeners();
-
-    // Initial data load when the page loads
-    fetchAthletes();
+    fetchAthletes(); // Load initial data
 });
 
 // --- END OF script.js ---
